@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>APR Digital ViaTec</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --azul: #0057a8;
+      --azul-escuro: #003b73;
+      --verde: #2bb673;
+      --verde-escuro: #168653;
+      --fundo: #f3f7fb;
+      --branco: #ffffff;
+      --texto: #1d2939;
+      --muted: #667085;
+      --borda: #d0d5dd;
+      --erro: #d92d20;
+      --alerta: #f79009;
+      --ok: #039855;
+      --sombra: 0 14px 35px rgba(16, 24, 40, 0.10);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--fundo);
+      color: var(--texto);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .login-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at top left, rgba(43,182,115,0.18), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(0,87,168,0.22), transparent 40%),
+        linear-gradient(135deg, #f4fbff, #eef6f2);
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 430px;
+      background: var(--branco);
+      border-radius: 26px;
+      box-shadow: var(--sombra);
+      padding: 32px;
+      border: 1px solid rgba(208, 213, 221, 0.75);
+    }
+
+    .logo-area {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .logo-area img {
+      max-width: 180px;
+      max-height: 90px;
+      object-fit: contain;
+      margin-bottom: 14px;
+    }
+
+    .logo-fallback {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 170px;
+      height: 70px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--azul), var(--verde));
+      color: white;
+      font-weight: 900;
+      font-size: 26px;
+      letter-spacing: 1px;
+      margin-bottom: 14px;
+    }
+
+    .login-card h1 {
+      margin: 0;
+      font-size: 24px;
+      color: var(--azul-escuro);
+    }
+
+    .login-card p {
+      color: var(--muted);
+      margin: 8px 0 0;
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 7px;
+      font-size: 14px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 15px;
+      outline: none;
+      background: white;
+      color: var(--texto);
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--azul);
+      box-shadow: 0 0 0 4px rgba(0, 87, 168, 0.12);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 90px;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 13px;
+      padding: 12px 16px;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.18s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--azul), var(--azul-escuro));
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(0, 87, 168, 0.24);
+    }
+
+    .btn-green {
+      background: linear-gradient(135deg, var(--verde), var(--verde-escuro));
+      color: white;
+    }
+
+    .btn-light {
+      background: #eef4ff;
+      color: var(--azul-escuro);
+      border: 1px solid #d7e5ff;
+    }
+
+    .btn-danger {
+      background: #fff1f0;
+      color: var(--erro);
+      border: 1px solid #ffdad6;
+    }
+
+    .btn-full {
+      width: 100%;
+    }
+
+    .msg {
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .msg.ok {
+      background: #ecfdf3;
+      color: #027a48;
+      border: 1px solid #abefc6;
+      display: block;
+    }
+
+    .msg.err {
+      background: #fff1f0;
+      color: #b42318;
+      border: 1px solid #fecdca;
+      display: block;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+    }
+
+    .sidebar {
+      background: linear-gradient(180deg, var(--azul-escuro), #042d54);
+      color: white;
+      padding: 22px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 26px;
+    }
+
+    .brand img {
+      width: 64px;
+      height: 50px;
+      object-fit: contain;
+      background: white;
+      border-radius: 12px;
+      padding: 6px;
+    }
+
+    .brand-fallback {
+      width: 64px;
+      height: 50px;
+      background: white;
+      color: var(--azul);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 14px;
+    }
+
+    .brand-title {
+      font-weight: 900;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    .user-box {
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 18px;
+    }
+
+    .user-name {
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .user-role {
+      font-size: 13px;
+      opacity: 0.82;
+    }
+
+    .nav {
+      display: grid;
+      gap: 9px;
+    }
+
+    .nav button {
+      width: 100%;
+      text-align: left;
+      border: 0;
+      background: transparent;
+      color: white;
+      padding: 12px 13px;
+      border-radius: 13px;
+      cursor: pointer;
+      font-weight: 800;
+      opacity: 0.88;
+    }
+
+    .nav button:hover,
+    .nav button.active {
+      background: rgba(255,255,255,0.14);
+      opacity: 1;
+    }
+
+    .main {
+      padding: 26px;
+      overflow-x: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+
+    .topbar h2 {
+      margin: 0;
+      color: var(--azul-escuro);
+      font-size: 26px;
+    }
+
+    .topbar p {
+      margin: 5px 0 0;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card {
+      background: white;
+      border: 1px solid rgba(208, 213, 221, 0.8);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 22px rgba(16, 24, 40, 0.06);
+      padding: 20px;
+    }
+
+    .card h3 {
+      margin: 0 0 14px;
+      color: var(--azul-escuro);
+      font-size: 19px;
+    }
+
+    .metric {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .metric-value {
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--azul);
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .badge {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .badge.rascunho {
+      background: #fff7ed;
+      color: #b54708;
+      border-color: #fed7aa;
+    }
+
+    .badge.aguardando_assinaturas {
+      background: #eff8ff;
+      color: #175cd3;
+      border-color: #b2ddff;
+    }
+
+    .badge.finalizada,
+    .badge.servico_iniciado,
+    .badge.servico_finalizado {
+      background: #ecfdf3;
+      color: #027a48;
+      border-color: #abefc6;
+    }
+
+    .badge.cancelada,
+    .badge.fora_do_padrao {
+      background: #fff1f0;
+      color: #b42318;
+      border-color: #fecdca;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 16px;
+      border: 1px solid var(--borda);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+      background: white;
+    }
+
+    th, td {
+      padding: 13px 14px;
+      border-bottom: 1px solid #eaecf0;
+      text-align: left;
+      font-size: 14px;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #344054;
+      font-weight: 900;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .form-section {
+      border: 1px solid #e4e7ec;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      background: #fcfcfd;
+    }
+
+    .form-section h4 {
+      margin: 0 0 12px;
+      color: var(--azul-escuro);
+    }
+
+    .checklist-group {
+      margin-bottom: 18px;
+      border: 1px solid #e4e7ec;
+      border-radius: 16px;
+      overflow: hidden;
+      background: white;
+    }
+
+    .checklist-title {
+      background: #f8fafc;
+      padding: 12px 14px;
+      font-weight: 900;
+      color: var(--azul-escuro);
+      border-bottom: 1px solid #e4e7ec;
+    }
+
+    .checklist-item {
+      padding: 14px;
+      border-bottom: 1px solid #eaecf0;
+      display: grid;
+      grid-template-columns: 1fr 180px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .checklist-item:last-child {
+      border-bottom: none;
+    }
+
+    .checklist-question {
+      font-weight: 700;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .checks {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .checks label {
+      margin: 0;
+      font-weight: 800;
+      font-size: 13px;
+      border: 1px solid #d0d5dd;
+      padding: 7px 9px;
+      border-radius: 999px;
+      cursor: pointer;
+      background: white;
+    }
+
+    .checks input {
+      width: auto;
+      margin-right: 4px;
+    }
+
+    .tecnico-lista {
+      display: grid;
+      gap: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 8px;
+      background: white;
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+    }
+
+    .tecnico-option {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid #eaecf0;
+      background: #fcfcfd;
+    }
+
+    .tecnico-option input {
+      width: auto;
+    }
+
+    .tecnico-option label {
+      margin: 0;
+      flex: 1;
+      cursor: pointer;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1.2fr 1.2fr 1fr auto;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .mobile-top {
+      display: none;
+      background: var(--azul-escuro);
+      color: white;
+      padding: 12px 16px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .mobile-top strong {
+      font-size: 16px;
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .danger-text {
+      color: var(--erro);
+      font-weight: 800;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .mobile-top {
+        display: flex;
+      }
+
+      .sidebar {
+        position: fixed;
+        left: -310px;
+        top: 0;
+        width: 290px;
+        height: 100vh;
+        z-index: 20;
+        transition: 0.22s;
+      }
+
+      .sidebar.open {
+        left: 0;
+      }
+
+      .main {
+        padding: 16px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .grid-2,
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+
+      .filters {
+        grid-template-columns: 1fr;
+      }
+
+      .checklist-item {
+        grid-template-columns: 1fr;
+      }
+
+      .checks {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- LOGIN -->
+  <section id="loginPage" class="login-page">
+    <div class="login-card">
+      <div class="logo-area">
+        <img src="logo.png" alt="Logo ViaTec" onerror="this.style.display='none'; document.getElementById('loginLogoFallback').style.display='inline-flex';">
+        <div id="loginLogoFallback" class="logo-fallback" style="display:none;">VIATEC</div>
+        <h1>APR Digital ViaTec</h1>
+        <p>Permissão de Trabalho e Análise Preliminar de Risco</p>
+      </div>
+
+      <div class="field">
+        <label for="loginEmail">E-mail</label>
+        <input id="loginEmail" type="email" placeholder="Digite seu e-mail" autocomplete="email">
+      </div>
+
+      <div class="field">
+        <label for="loginSenha">Senha</label>
+        <input id="loginSenha" type="password" placeholder="Digite sua senha" autocomplete="current-password">
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="login()">Entrar</button>
+
+      <div id="loginMsg" class="msg"></div>
+    </div>
+  </section>
+
+  <!-- APP -->
+  <section id="appPage" class="hidden">
+    <div class="mobile-top">
+      <strong>APR Digital</strong>
+      <button class="btn btn-light" onclick="toggleMenu()">Menu</button>
+    </div>
+
+    <div class="app">
+      <aside id="sidebar" class="sidebar">
+        <div class="brand">
+          <img src="logo.png" alt="ViaTec" onerror="this.style.display='none'; document.getElementById('brandFallback').style.display='flex';">
+          <div id="brandFallback" class="brand-fallback" style="display:none;">VT</div>
+          <div>
+            <div class="brand-title">APR Digital</div>
+            <div class="brand-sub">ViaTec Telecom</div>
+          </div>
+        </div>
+
+        <div class="user-box">
+          <div id="userNome" class="user-name">Carregando...</div>
+          <div id="userPerfil" class="user-role">Perfil</div>
+        </div>
+
+        <nav class="nav">
+          <button id="navDashboard" class="active" onclick="showTab('dashboard')">Dashboard</button>
+          <button id="navNovaApr" onclick="showTab('novaApr')">Nova APR</button>
+          <button id="navHistorico" onclick="showTab('historico')">Histórico de APRs</button>
+          <button id="navTecnicos" onclick="showTab('tecnicos')">Técnicos</button>
+          <button onclick="logout()">Sair</button>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <!-- DASHBOARD -->
+        <section id="tabDashboard">
+          <div class="topbar">
+            <div>
+              <h2>Dashboard</h2>
+              <p>Resumo geral das APRs e atividades.</p>
+            </div>
+            <button class="btn btn-green" onclick="showTab('novaApr')">+ Nova APR</button>
+          </div>
+
+          <div class="grid grid-3">
+            <div class="card metric">
+              <div>
+                <div class="metric-label">APRs cadastradas</div>
+                <div id="metricTotalAprs" class="metric-value">0</div>
+              </div>
+            </div>
+
+            <div class="card metric">
+              <div>
+                <div class="metric-label">Aguardando assinaturas</div>
+                <div id="metricAguardando" class="metric-value">0</div>
+              </div>
+            </div>
+
+            <div class="card metric">
+              <div>
+                <div class="metric-label">Técnicos ativos</div>
+                <div id="metricTecnicos" class="metric-value">0</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:18px;">
+            <h3>Próximas etapas do sistema</h3>
+            <p class="small">
+              Nesta V1 validamos login, técnicos, criação da APR e checklist.
+              Na próxima etapa entram fotos de comprovação, assinatura individual, PDF e controle de início do serviço.
+            </p>
+          </div>
+        </section>
+
+        <!-- NOVA APR -->
+        <section id="tabNovaApr" class="hidden">
+          <div class="topbar">
+            <div>
+              <h2>Nova APR</h2>
+              <p>Preencha os dados da OS e da atividade antes de iniciar o serviço.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="form-section">
+              <h4>Dados da OS / Cliente</h4>
+
+              <div class="grid grid-3">
+                <div class="field">
+                  <label>Nº OS</label>
+                  <input id="aprNumeroOs" placeholder="Ex: 12345">
+                </div>
+
+                <div class="field">
+                  <label>Protocolo</label>
+                  <input id="aprProtocolo" placeholder="Ex: 202606...">
+                </div>
+
+                <div class="field">
+                  <label>Código do Cliente</label>
+                  <input id="aprCodigoCliente" placeholder="Código do cliente">
+                </div>
+              </div>
+
+              <div class="grid grid-2">
+                <div class="field">
+                  <label>Nome do Cliente</label>
+                  <input id="aprClienteNome" placeholder="Nome do cliente">
+                </div>
+
+                <div class="field">
+                  <label>Cidade/Bairro</label>
+                  <input id="aprCidadeBairro" placeholder="Ex: Campo Novo / Centro">
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Endereço</label>
+                <input id="aprEndereco" placeholder="Endereço do atendimento">
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>Serviço / Atividade</h4>
+
+              <div class="grid grid-2">
+                <div class="field">
+                  <label>Tipo de Serviço</label>
+                  <select id="aprTipoServico" onchange="toggleOutroServico()">
+                    <option value="">Selecione</option>
+                    <option value="instalacao_remontagem">Instalação / Remontagem</option>
+                    <option value="manutencao_rede">Manutenção de Rede</option>
+                    <option value="suporte_tecnico">Suporte Técnico</option>
+                    <option value="outros">Outros</option>
+                  </select>
+                </div>
+
+                <div id="campoOutroServico" class="field hidden">
+                  <label>Descreva o outro serviço</label>
+                  <input id="aprTipoServicoOutros" placeholder="Informe o tipo de serviço">
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Descrição da Atividade</label>
+                <textarea id="aprDescricao" placeholder="Descreva a atividade que será executada"></textarea>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>Técnicos envolvidos</h4>
+              <p class="small">
+                Selecione todos os técnicos que irão participar. Na próxima etapa, todos precisarão assinar individualmente.
+              </p>
+              <div id="listaTecnicosNovaApr" class="tecnico-lista"></div>
+            </div>
+
+            <div class="form-section">
+              <h4>Checklist da APR</h4>
+              <p class="small">
+                Este checklist foi montado com base no modelo da APR enviada.
+              </p>
+              <div id="checklistContainer"></div>
+            </div>
+
+            <div class="form-section">
+              <h4>Observações adicionais</h4>
+              <textarea id="aprObservacoes" placeholder="Informe observações, pendências ou detalhes da análise de risco"></textarea>
+            </div>
+
+            <button class="btn btn-primary" onclick="salvarApr()">Salvar APR</button>
+            <div id="novaAprMsg" class="msg"></div>
+          </div>
+        </section>
+
+        <!-- HISTÓRICO -->
+        <section id="tabHistorico" class="hidden">
+          <div class="topbar">
+            <div>
+              <h2>Histórico de APRs</h2>
+              <p>Consulte APRs por OS, cliente, data e status.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="filters">
+              <div class="field">
+                <label>Buscar OS / Protocolo</label>
+                <input id="filtroOs" placeholder="Digite OS ou protocolo">
+              </div>
+
+              <div class="field">
+                <label>Cliente</label>
+                <input id="filtroCliente" placeholder="Nome do cliente">
+              </div>
+
+              <div class="field">
+                <label>Status</label>
+                <select id="filtroStatus">
+                  <option value="">Todos</option>
+                  <option value="rascunho">Rascunho</option>
+                  <option value="aguardando_assinaturas">Aguardando assinaturas</option>
+                  <option value="finalizada">Finalizada</option>
+                  <option value="servico_iniciado">Serviço iniciado</option>
+                  <option value="servico_finalizado">Serviço finalizado</option>
+                  <option value="fora_do_padrao">Fora do padrão</option>
+                  <option value="cancelada">Cancelada</option>
+                </select>
+              </div>
+
+              <button class="btn btn-primary" onclick="carregarAprs()">Filtrar</button>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>APR</th>
+                    <th>OS / Protocolo</th>
+                    <th>Cliente</th>
+                    <th>Serviço</th>
+                    <th>Status</th>
+                    <th>Criada em</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyAprs">
+                  <tr>
+                    <td colspan="6">Carregando...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TÉCNICOS -->
+        <section id="tabTecnicos" class="hidden">
+          <div class="topbar">
+            <div>
+              <h2>Técnicos</h2>
+              <p>Cadastre os técnicos que poderão ser adicionados nas APRs.</p>
+            </div>
+          </div>
+
+          <div class="grid grid-2">
+            <div class="card">
+              <h3>Novo técnico</h3>
+
+              <div class="field">
+                <label>Nome completo</label>
+                <input id="tecNome" placeholder="Nome do técnico">
+              </div>
+
+              <div class="field">
+                <label>Cargo</label>
+                <input id="tecCargo" value="Técnico/Auxiliar de Telecomunicações">
+              </div>
+
+              <div class="field">
+                <label>Telefone</label>
+                <input id="tecTelefone" placeholder="Telefone/WhatsApp">
+              </div>
+
+              <button class="btn btn-primary" onclick="salvarTecnico()">Cadastrar técnico</button>
+              <div id="tecMsg" class="msg"></div>
+
+              <p class="small" style="margin-top:14px;">
+                Nesta primeira versão, este cadastro cria o técnico para seleção na APR.
+                O login individual do técnico será vinculado na próxima etapa, usando o Supabase Authentication.
+              </p>
+            </div>
+
+            <div class="card">
+              <h3>Técnicos cadastrados</h3>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Cargo</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyTecnicos">
+                    <tr>
+                      <td colspan="3">Carregando...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </section>
+
+  <script>
+    const SUPABASE_URL = "https://xepcbnwcuehfxdlqnonp.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_jo9nWMtk0y0pg3HqaDbXVQ_oCrCaW3Z";
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let usuarioAtual = null;
+    let perfilAtual = null;
+    let tecnicosCache = [];
+    let checklistModeloCache = [];
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      await verificarSessao();
+    });
+
+    function setMsg(id, tipo, texto) {
+      const el = document.getElementById(id);
+      el.className = "msg " + (tipo === "ok" ? "ok" : "err");
+      el.textContent = texto;
+    }
+
+    function clearMsg(id) {
+      const el = document.getElementById(id);
+      el.className = "msg";
+      el.textContent = "";
+    }
+
+    function formatarData(data) {
+      if (!data) return "-";
+      return new Date(data).toLocaleString("pt-BR");
+    }
+
+    function labelStatus(status) {
+      const map = {
+        rascunho: "Rascunho",
+        aguardando_assinaturas: "Aguardando assinaturas",
+        finalizada: "Finalizada",
+        servico_iniciado: "Serviço iniciado",
+        servico_finalizado: "Serviço finalizado",
+        cancelada: "Cancelada",
+        fora_do_padrao: "Fora do padrão"
+      };
+      return map[status] || status || "-";
+    }
+
+    async function verificarSessao() {
+      const { data } = await supabaseClient.auth.getSession();
+
+      if (data.session?.user) {
+        usuarioAtual = data.session.user;
+        await carregarPerfil();
+        mostrarApp();
+      } else {
+        mostrarLogin();
+      }
+    }
+
+    async function login() {
+      clearMsg("loginMsg");
+
+      const email = document.getElementById("loginEmail").value.trim();
+      const senha = document.getElementById("loginSenha").value.trim();
+
+      if (!email || !senha) {
+        setMsg("loginMsg", "err", "Informe e-mail e senha.");
+        return;
+      }
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password: senha
+      });
+
+      if (error) {
+        setMsg("loginMsg", "err", "Erro ao entrar: " + error.message);
+        return;
+      }
+
+      usuarioAtual = data.user;
+      await carregarPerfil();
+      mostrarApp();
+    }
+
+    async function logout() {
+      await supabaseClient.auth.signOut();
+      usuarioAtual = null;
+      perfilAtual = null;
+      mostrarLogin();
+    }
+
+    async function carregarPerfil() {
+      const { data, error } = await supabaseClient
+        .from("perfis")
+        .select("*")
+        .eq("id", usuarioAtual.id)
+        .single();
+
+      if (error || !data) {
+        perfilAtual = null;
+        alert("Usuário autenticado, mas sem perfil cadastrado na tabela perfis.");
+        return;
+      }
+
+      perfilAtual = data;
+    }
+
+    function mostrarLogin() {
+      document.getElementById("loginPage").classList.remove("hidden");
+      document.getElementById("appPage").classList.add("hidden");
+    }
+
+    async function mostrarApp() {
+      document.getElementById("loginPage").classList.add("hidden");
+      document.getElementById("appPage").classList.remove("hidden");
+
+      document.getElementById("userNome").textContent = perfilAtual?.nome || "Usuário";
+      document.getElementById("userPerfil").textContent = perfilAtual?.perfil === "admin" ? "Administrador" : "Técnico";
+
+      await carregarDadosIniciais();
+      showTab("dashboard");
+    }
+
+    async function carregarDadosIniciais() {
+      await carregarTecnicos();
+      await carregarChecklistModelo();
+      await carregarAprs();
+      await atualizarDashboard();
+    }
+
+    async function atualizarDashboard() {
+      const { count: totalAprs } = await supabaseClient
+        .from("aprs")
+        .select("*", { count: "exact", head: true });
+
+      const { count: aguardando } = await supabaseClient
+        .from("aprs")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "aguardando_assinaturas");
+
+      const { count: tecnicos } = await supabaseClient
+        .from("tecnicos")
+        .select("*", { count: "exact", head: true })
+        .eq("ativo", true);
+
+      document.getElementById("metricTotalAprs").textContent = totalAprs || 0;
+      document.getElementById("metricAguardando").textContent = aguardando || 0;
+      document.getElementById("metricTecnicos").textContent = tecnicos || 0;
+    }
+
+    function toggleMenu() {
+      document.getElementById("sidebar").classList.toggle("open");
+    }
+
+    function showTab(tab) {
+      const tabs = ["Dashboard", "NovaApr", "Historico", "Tecnicos"];
+
+      tabs.forEach(t => {
+        document.getElementById("tab" + t).classList.add("hidden");
+      });
+
+      document.querySelectorAll(".nav button").forEach(btn => btn.classList.remove("active"));
+
+      if (tab === "dashboard") {
+        document.getElementById("tabDashboard").classList.remove("hidden");
+        document.getElementById("navDashboard").classList.add("active");
+        atualizarDashboard();
+      }
+
+      if (tab === "novaApr") {
+        document.getElementById("tabNovaApr").classList.remove("hidden");
+        document.getElementById("navNovaApr").classList.add("active");
+        renderTecnicosNovaApr();
+        renderChecklist();
+      }
+
+      if (tab === "historico") {
+        document.getElementById("tabHistorico").classList.remove("hidden");
+        document.getElementById("navHistorico").classList.add("active");
+        carregarAprs();
+      }
+
+      if (tab === "tecnicos") {
+        document.getElementById("tabTecnicos").classList.remove("hidden");
+        document.getElementById("navTecnicos").classList.add("active");
+        carregarTecnicos();
+      }
+
+      document.getElementById("sidebar").classList.remove("open");
+    }
+
+    async function carregarTecnicos() {
+      const { data, error } = await supabaseClient
+        .from("tecnicos")
+        .select("*")
+        .order("nome", { ascending: true });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      tecnicosCache = data || [];
+      renderTabelaTecnicos();
+      renderTecnicosNovaApr();
+      await atualizarDashboard();
+    }
+
+    function renderTabelaTecnicos() {
+      const tbody = document.getElementById("tbodyTecnicos");
+      if (!tbody) return;
+
+      if (!tecnicosCache.length) {
+        tbody.innerHTML = `<tr><td colspan="3">Nenhum técnico cadastrado.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = tecnicosCache.map(t => `
+        <tr>
+          <td><strong>${escapeHtml(t.nome)}</strong></td>
+          <td>${escapeHtml(t.cargo || "-")}</td>
+          <td>${t.ativo ? '<span class="badge finalizada">Ativo</span>' : '<span class="badge cancelada">Inativo</span>'}</td>
+        </tr>
+      `).join("");
+    }
+
+    function renderTecnicosNovaApr() {
+      const box = document.getElementById("listaTecnicosNovaApr");
+      if (!box) return;
+
+      const ativos = tecnicosCache.filter(t => t.ativo);
+
+      if (!ativos.length) {
+        box.innerHTML = `<div class="small danger-text">Nenhum técnico ativo cadastrado. Cadastre em Técnicos.</div>`;
+        return;
+      }
+
+      box.innerHTML = ativos.map(t => `
+        <div class="tecnico-option">
+          <input type="checkbox" class="tecAprCheck" id="tec_${t.id}" value="${t.id}">
+          <label for="tec_${t.id}">
+            <strong>${escapeHtml(t.nome)}</strong><br>
+            <span class="small">${escapeHtml(t.cargo || "Técnico")}</span>
+          </label>
+        </div>
+      `).join("");
+    }
+
+    async function salvarTecnico() {
+      clearMsg("tecMsg");
+
+      if (perfilAtual?.perfil !== "admin") {
+        setMsg("tecMsg", "err", "Somente admin pode cadastrar técnicos.");
+        return;
+      }
+
+      const nome = document.getElementById("tecNome").value.trim();
+      const cargo = document.getElementById("tecCargo").value.trim();
+      const telefone = document.getElementById("tecTelefone").value.trim();
+
+      if (!nome) {
+        setMsg("tecMsg", "err", "Informe o nome do técnico.");
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from("tecnicos")
+        .insert({
+          nome,
+          cargo,
+          telefone,
+          ativo: true
+        });
+
+      if (error) {
+        setMsg("tecMsg", "err", "Erro ao cadastrar técnico: " + error.message);
+        return;
+      }
+
+      document.getElementById("tecNome").value = "";
+      document.getElementById("tecCargo").value = "Técnico/Auxiliar de Telecomunicações";
+      document.getElementById("tecTelefone").value = "";
+
+      setMsg("tecMsg", "ok", "Técnico cadastrado com sucesso.");
+      await carregarTecnicos();
+    }
+
+    async function carregarChecklistModelo() {
+      const { data, error } = await supabaseClient
+        .from("apr_checklist_modelo")
+        .select("*")
+        .eq("ativo", true)
+        .order("ordem", { ascending: true });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      checklistModeloCache = data || [];
+    }
+
+    function renderChecklist() {
+      const container = document.getElementById("checklistContainer");
+      if (!container) return;
+
+      if (!checklistModeloCache.length) {
+        container.innerHTML = `<p class="danger-text">Checklist não encontrado no banco.</p>`;
+        return;
+      }
+
+      const grupos = {};
+
+      checklistModeloCache.forEach(item => {
+        if (!grupos[item.grupo]) grupos[item.grupo] = [];
+        grupos[item.grupo].push(item);
+      });
+
+      container.innerHTML = Object.keys(grupos).map(grupo => `
+        <div class="checklist-group">
+          <div class="checklist-title">${escapeHtml(grupo)}</div>
+          ${grupos[grupo].map(item => `
+            <div class="checklist-item">
+              <div class="checklist-question">${item.ordem}. ${escapeHtml(item.pergunta)}</div>
+              <div class="checks" data-check-id="${item.id}">
+                <label><input type="radio" name="check_${item.id}" value="S"> S</label>
+                <label><input type="radio" name="check_${item.id}" value="N"> N</label>
+                ${item.aceita_na ? `<label><input type="radio" name="check_${item.id}" value="NA"> N/A</label>` : ""}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `).join("");
+    }
+
+    function toggleOutroServico() {
+      const val = document.getElementById("aprTipoServico").value;
+      document.getElementById("campoOutroServico").classList.toggle("hidden", val !== "outros");
+    }
+
+    function getTecnicosSelecionados() {
+      const checks = [...document.querySelectorAll(".tecAprCheck:checked")];
+      return checks.map(c => {
+        return tecnicosCache.find(t => t.id === c.value);
+      }).filter(Boolean);
+    }
+
+    function getRespostasChecklist() {
+      return checklistModeloCache.map(item => {
+        const marcado = document.querySelector(`input[name="check_${item.id}"]:checked`);
+        return {
+          modelo: item,
+          resposta: marcado ? marcado.value : null
+        };
+      });
+    }
+
+    async function salvarApr() {
+      clearMsg("novaAprMsg");
+
+      const numero_os = document.getElementById("aprNumeroOs").value.trim();
+      const protocolo_os = document.getElementById("aprProtocolo").value.trim();
+      const codigo_cliente = document.getElementById("aprCodigoCliente").value.trim();
+      const cliente_nome = document.getElementById("aprClienteNome").value.trim();
+      const cidade_bairro = document.getElementById("aprCidadeBairro").value.trim();
+      const cliente_endereco = document.getElementById("aprEndereco").value.trim();
+      const tipo_servico = document.getElementById("aprTipoServico").value;
+      const tipo_servico_outros = document.getElementById("aprTipoServicoOutros").value.trim();
+      const descricao_atividade = document.getElementById("aprDescricao").value.trim();
+      const observacoes_adicionais = document.getElementById("aprObservacoes").value.trim();
+
+      const tecnicosSelecionados = getTecnicosSelecionados();
+      const respostas = getRespostasChecklist();
+
+      if (!numero_os && !protocolo_os) {
+        setMsg("novaAprMsg", "err", "Informe o Nº da OS ou o protocolo.");
+        return;
+      }
+
+      if (!cliente_nome) {
+        setMsg("novaAprMsg", "err", "Informe o nome do cliente.");
+        return;
+      }
+
+      if (!cidade_bairro) {
+        setMsg("novaAprMsg", "err", "Informe cidade/bairro.");
+        return;
+      }
+
+      if (!tipo_servico) {
+        setMsg("novaAprMsg", "err", "Selecione o tipo de serviço.");
+        return;
+      }
+
+      if (tipo_servico === "outros" && !tipo_servico_outros) {
+        setMsg("novaAprMsg", "err", "Descreva o tipo de serviço em Outros.");
+        return;
+      }
+
+      if (!descricao_atividade) {
+        setMsg("novaAprMsg", "err", "Informe a descrição da atividade.");
+        return;
+      }
+
+      if (!tecnicosSelecionados.length) {
+        setMsg("novaAprMsg", "err", "Selecione pelo menos um técnico envolvido.");
+        return;
+      }
+
+      const incompletas = respostas.filter(r => !r.resposta);
+      if (incompletas.length > 0) {
+        setMsg("novaAprMsg", "err", "Preencha todo o checklist da APR.");
+        return;
+      }
+
+      const tecnicoResponsavel = tecnicosSelecionados[0];
+
+      const { data: aprCriada, error: aprError } = await supabaseClient
+        .from("aprs")
+        .insert({
+          numero_os,
+          protocolo_os,
+          codigo_cliente,
+          cliente_nome,
+          cliente_endereco,
+          cidade_bairro,
+          tipo_servico,
+          tipo_servico_outros,
+          descricao_atividade,
+          observacoes_adicionais,
+          status: "aguardando_assinaturas",
+          criada_por: usuarioAtual.id,
+          tecnico_responsavel_id: tecnicoResponsavel.id,
+          emitida_em: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (aprError) {
+        setMsg("novaAprMsg", "err", "Erro ao salvar APR: " + aprError.message);
+        return;
+      }
+
+      const aprId = aprCriada.id;
+
+      const tecnicosInsert = tecnicosSelecionados.map((t, index) => ({
+        apr_id: aprId,
+        tecnico_id: t.id,
+        usuario_id: t.usuario_id || null,
+        nome_tecnico: t.nome,
+        cargo: t.cargo,
+        responsavel: index === 0,
+        assinatura_pendente: true,
+        assinado: false,
+        texto_declaracao: "Declaro que li e estou ciente da APR, dos riscos da atividade e das medidas de segurança informadas antes do início do serviço."
+      }));
+
+      const { error: tecAprError } = await supabaseClient
+        .from("apr_tecnicos")
+        .insert(tecnicosInsert);
+
+      if (tecAprError) {
+        setMsg("novaAprMsg", "err", "APR criada, mas erro ao vincular técnicos: " + tecAprError.message);
+        return;
+      }
+
+      const respostasInsert = respostas.map(r => ({
+        apr_id: aprId,
+        checklist_modelo_id: r.modelo.id,
+        ordem: r.modelo.ordem,
+        grupo: r.modelo.grupo,
+        pergunta: r.modelo.pergunta,
+        resposta: r.resposta,
+        respondido_por: usuarioAtual.id,
+        respondido_em: new Date().toISOString()
+      }));
+
+      const { error: checkError } = await supabaseClient
+        .from("apr_checklist_respostas")
+        .insert(respostasInsert);
+
+      if (checkError) {
+        setMsg("novaAprMsg", "err", "APR criada, mas erro ao salvar checklist: " + checkError.message);
+        return;
+      }
+
+      await supabaseClient
+        .from("apr_linha_tempo")
+        .insert({
+          apr_id: aprId,
+          usuario_id: usuarioAtual.id,
+          acao: "APR criada",
+          detalhes: `APR criada para OS ${numero_os || protocolo_os}.`,
+          dados: {
+            tecnicos: tecnicosSelecionados.map(t => t.nome)
+          }
+        });
+
+      limparFormularioApr();
+      setMsg("novaAprMsg", "ok", `APR ${aprCriada.numero_apr} criada com sucesso. Status: aguardando assinaturas.`);
+      await carregarAprs();
+      await atualizarDashboard();
+    }
+
+    function limparFormularioApr() {
+      document.getElementById("aprNumeroOs").value = "";
+      document.getElementById("aprProtocolo").value = "";
+      document.getElementById("aprCodigoCliente").value = "";
+      document.getElementById("aprClienteNome").value = "";
+      document.getElementById("aprCidadeBairro").value = "";
+      document.getElementById("aprEndereco").value = "";
+      document.getElementById("aprTipoServico").value = "";
+      document.getElementById("aprTipoServicoOutros").value = "";
+      document.getElementById("aprDescricao").value = "";
+      document.getElementById("aprObservacoes").value = "";
+      document.querySelectorAll(".tecAprCheck").forEach(c => c.checked = false);
+      document.querySelectorAll("#checklistContainer input[type='radio']").forEach(r => r.checked = false);
+      toggleOutroServico();
+    }
+
+    async function carregarAprs() {
+      const tbody = document.getElementById("tbodyAprs");
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="6">Carregando...</td></tr>`;
+      }
+
+      const filtroOs = document.getElementById("filtroOs")?.value.trim();
+      const filtroCliente = document.getElementById("filtroCliente")?.value.trim();
+      const filtroStatus = document.getElementById("filtroStatus")?.value;
+
+      let query = supabaseClient
+        .from("aprs")
+        .select("*")
+        .order("criada_em", { ascending: false })
+        .limit(100);
+
+      if (filtroStatus) {
+        query = query.eq("status", filtroStatus);
+      }
+
+      if (filtroCliente) {
+        query = query.ilike("cliente_nome", `%${filtroCliente}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6">Erro ao carregar APRs: ${escapeHtml(error.message)}</td></tr>`;
+        return;
+      }
+
+      let lista = data || [];
+
+      if (filtroOs) {
+        const termo = filtroOs.toLowerCase();
+        lista = lista.filter(a =>
+          String(a.numero_os || "").toLowerCase().includes(termo) ||
+          String(a.protocolo_os || "").toLowerCase().includes(termo) ||
+          String(a.numero_apr || "").toLowerCase().includes(termo)
+        );
+      }
+
+      renderAprs(lista);
+    }
+
+    function renderAprs(lista) {
+      const tbody = document.getElementById("tbodyAprs");
+      if (!tbody) return;
+
+      if (!lista.length) {
+        tbody.innerHTML = `<tr><td colspan="6">Nenhuma APR encontrada.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = lista.map(apr => `
+        <tr>
+          <td><strong>${escapeHtml(apr.numero_apr || "-")}</strong></td>
+          <td>
+            OS: ${escapeHtml(apr.numero_os || "-")}<br>
+            <span class="small">Protocolo: ${escapeHtml(apr.protocolo_os || "-")}</span>
+          </td>
+          <td>
+            <strong>${escapeHtml(apr.cliente_nome || "-")}</strong><br>
+            <span class="small">${escapeHtml(apr.cidade_bairro || "-")}</span>
+          </td>
+          <td>${escapeHtml(formatarTipoServico(apr.tipo_servico, apr.tipo_servico_outros))}</td>
+          <td><span class="badge ${apr.status}">${labelStatus(apr.status)}</span></td>
+          <td>${formatarData(apr.criada_em)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function formatarTipoServico(tipo, outros) {
+      const map = {
+        instalacao_remontagem: "Instalação / Remontagem",
+        manutencao_rede: "Manutenção de Rede",
+        suporte_tecnico: "Suporte Técnico",
+        outros: outros || "Outros"
+      };
+      return map[tipo] || "-";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
+</body>
+</html>
