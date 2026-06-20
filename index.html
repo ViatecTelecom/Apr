@@ -1758,21 +1758,21 @@
 
       const tecnicoResponsavel = tecnicosSelecionados[0];
 
-      const payloadApr = {
-        numero_os,
-        protocolo_os,
-        codigo_cliente,
-        cliente_nome,
-        cliente_endereco,
-        cidade_bairro,
-        tipo_servico,
-        tipo_servico_outros,
-        descricao_atividade,
-        observacoes_adicionais,
-        status: "aguardando_assinaturas",
-        tecnico_responsavel_id: tecnicoResponsavel.id,
-        atualizacao_em: new Date().toISOString()
-      };
+   const payloadApr = {
+  numero_os,
+  protocolo_os,
+  codigo_cliente,
+  cliente_nome,
+  cliente_endereco,
+  cidade_bairro,
+  tipo_servico,
+  tipo_servico_outros,
+  descricao_atividade,
+  observacoes_adicionais,
+  status: "aguardando_assinaturas",
+  tecnico_responsavel_id: tecnicoResponsavel.id,
+  atualizado_em: new Date().toISOString()
+};
 
       let aprId = aprEditandoId;
       let aprNumero = "";
