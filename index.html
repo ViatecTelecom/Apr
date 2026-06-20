@@ -833,6 +833,65 @@
       color: var(--azul-escuro);
     }
 
+
+    .foto-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .foto-input {
+      display: none;
+    }
+
+    .foto-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .foto-card {
+      border: 1px solid #e4e7ec;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .foto-card img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .foto-card-body {
+      padding: 9px;
+    }
+
+    .foto-card-body strong {
+      font-size: 12px;
+      display: block;
+      color: var(--azul-escuro);
+      margin-bottom: 4px;
+    }
+
+    .foto-card-body .small {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .foto-empty {
+      border: 1px dashed #b8c4d6;
+      background: #f8fafc;
+      color: var(--muted);
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
     @media (max-width: 900px) {
       .app {
         grid-template-columns: 1fr;
@@ -1102,6 +1161,30 @@
               <div id="wizardContainer"></div>
             </div>
 
+
+            <div class="form-section">
+              <h4>Fotos de comprovação</h4>
+              <p class="small">
+                Anexe fotos para comprovar a APR antes do início do serviço. As imagens serão comprimidas automaticamente antes do envio.
+              </p>
+
+              <div class="foto-actions">
+                <label class="btn btn-green" for="inputFotosApr">+ Adicionar fotos</label>
+                <input
+                  id="inputFotosApr"
+                  class="foto-input"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  multiple
+                  onchange="selecionarFotosApr(event)"
+                >
+                <span class="small">Recomendado: local, técnicos/EPI e condição de risco.</span>
+              </div>
+
+              <div id="fotosAprGrid" class="foto-grid"></div>
+            </div>
+
             <div class="form-section">
               <h4>Observações adicionais</h4>
               <textarea id="aprObservacoes" placeholder="Informe observações, pendências ou detalhes da análise de risco"></textarea>
@@ -1363,6 +1446,8 @@
     let checklistAnswers = {};
     let aprEditandoId = null;
     let tecnicosSelecionadosApr = new Set();
+    let fotosPendentesApr = [];
+    let fotosExistentesApr = [];
 
     document.addEventListener("DOMContentLoaded", async () => {
       await verificarSessao();
@@ -1545,6 +1630,7 @@
         document.getElementById("tabNovaApr").classList.remove("hidden");
         document.getElementById("navNovaApr").classList.add("active");
         renderTecnicosNovaApr();
+        renderFotosApr();
         renderWizard();
       }
 
@@ -1991,6 +2077,268 @@
       clearMsg("novaAprMsg");
     }
 
+
+    function formatBytes(bytes) {
+      if (!bytes && bytes !== 0) return "-";
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+    }
+
+    async function selecionarFotosApr(event) {
+      const files = Array.from(event.target.files || []);
+
+      if (!files.length) return;
+
+      for (const file of files) {
+        if (!file.type.startsWith("image/")) continue;
+
+        try {
+          const comprimida = await comprimirImagem(file, 1600, 0.78);
+
+          fotosPendentesApr.push({
+            id_local: crypto.randomUUID(),
+            file_original: file,
+            blob: comprimida.blob,
+            preview_url: URL.createObjectURL(comprimida.blob),
+            nome_original: file.name,
+            tamanho_original_bytes: file.size,
+            tamanho_comprimido_bytes: comprimida.blob.size,
+            largura: comprimida.largura,
+            altura: comprimida.altura,
+            mime_type: comprimida.blob.type || "image/webp"
+          });
+        } catch (err) {
+          console.error(err);
+          alert("Erro ao processar a imagem: " + file.name);
+        }
+      }
+
+      event.target.value = "";
+      renderFotosApr();
+    }
+
+    function comprimirImagem(file, maxWidth = 1600, quality = 0.78) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
+
+        reader.onload = e => {
+          img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob(
+              blob => {
+                if (!blob) {
+                  reject(new Error("Não foi possível comprimir a imagem."));
+                  return;
+                }
+
+                resolve({
+                  blob,
+                  largura: width,
+                  altura: height
+                });
+              },
+              "image/webp",
+              quality
+            );
+          };
+
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderFotosApr() {
+      const grid = document.getElementById("fotosAprGrid");
+      if (!grid) return;
+
+      const total = fotosPendentesApr.length + fotosExistentesApr.length;
+
+      if (!total) {
+        grid.innerHTML = `
+          <div class="foto-empty">
+            Nenhuma foto adicionada ainda.
+          </div>
+        `;
+        return;
+      }
+
+      const existentesHtml = fotosExistentesApr.map(f => `
+        <div class="foto-card">
+          <img src="${f.signed_url || ''}" alt="Foto da APR">
+          <div class="foto-card-body">
+            <strong>Foto salva</strong>
+            <span class="small">${escapeHtml(f.arquivo_nome || "Arquivo")}</span>
+            <span class="small">${formatBytes(f.tamanho_bytes)}</span>
+            <button class="btn btn-danger btn-mini" type="button" onclick="removerFotoExistente('${f.id}', '${escapeHtml(f.storage_path)}')">Remover</button>
+          </div>
+        </div>
+      `).join("");
+
+      const pendentesHtml = fotosPendentesApr.map(f => `
+        <div class="foto-card">
+          <img src="${f.preview_url}" alt="Foto pendente">
+          <div class="foto-card-body">
+            <strong>Nova foto</strong>
+            <span class="small">${escapeHtml(f.nome_original)}</span>
+            <span class="small">${formatBytes(f.tamanho_original_bytes)} → ${formatBytes(f.tamanho_comprimido_bytes)}</span>
+            <button class="btn btn-danger btn-mini" type="button" onclick="removerFotoPendente('${f.id_local}')">Remover</button>
+          </div>
+        </div>
+      `).join("");
+
+      grid.innerHTML = existentesHtml + pendentesHtml;
+    }
+
+    function removerFotoPendente(idLocal) {
+      const foto = fotosPendentesApr.find(f => f.id_local === idLocal);
+      if (foto?.preview_url) URL.revokeObjectURL(foto.preview_url);
+
+      fotosPendentesApr = fotosPendentesApr.filter(f => f.id_local !== idLocal);
+      renderFotosApr();
+    }
+
+    async function removerFotoExistente(id, storagePath) {
+      if (!confirm("Remover esta foto da APR?")) return;
+
+      const { error: storageError } = await supabaseClient
+        .storage
+        .from("apr-arquivos")
+        .remove([storagePath]);
+
+      if (storageError) {
+        alert("Erro ao remover arquivo do Storage: " + storageError.message);
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from("apr_fotos")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        alert("Arquivo removido, mas erro ao remover registro: " + error.message);
+        return;
+      }
+
+      fotosExistentesApr = fotosExistentesApr.filter(f => f.id !== id);
+      renderFotosApr();
+    }
+
+    async function carregarFotosApr(aprId) {
+      fotosExistentesApr = [];
+
+      if (!aprId) {
+        renderFotosApr();
+        return;
+      }
+
+      const { data, error } = await supabaseClient
+        .from("apr_fotos")
+        .select("*")
+        .eq("apr_id", aprId)
+        .order("enviada_em", { ascending: true });
+
+      if (error) {
+        console.error(error);
+        renderFotosApr();
+        return;
+      }
+
+      const fotos = data || [];
+
+      for (const foto of fotos) {
+        const { data: signed } = await supabaseClient
+          .storage
+          .from("apr-arquivos")
+          .createSignedUrl(foto.storage_path, 60 * 60);
+
+        fotosExistentesApr.push({
+          ...foto,
+          signed_url: signed?.signedUrl || ""
+        });
+      }
+
+      renderFotosApr();
+    }
+
+    async function uploadFotosApr(aprId, numeroApr) {
+      if (!fotosPendentesApr.length) return true;
+
+      for (let i = 0; i < fotosPendentesApr.length; i++) {
+        const foto = fotosPendentesApr[i];
+
+        const ano = new Date().getFullYear();
+        const mes = String(new Date().getMonth() + 1).padStart(2, "0");
+        const nomeSeguro = `${Date.now()}-${i + 1}.webp`;
+
+        const path = `fotos/${ano}/${mes}/${numeroApr || aprId}/${nomeSeguro}`;
+
+        const { error: uploadError } = await supabaseClient
+          .storage
+          .from("apr-arquivos")
+          .upload(path, foto.blob, {
+            contentType: "image/webp",
+            upsert: false
+          });
+
+        if (uploadError) {
+          setMsg("novaAprMsg", "err", "Erro ao enviar foto: " + uploadError.message);
+          return false;
+        }
+
+        const { error: dbError } = await supabaseClient
+          .from("apr_fotos")
+          .insert({
+            apr_id: aprId,
+            enviado_por: usuarioAtual.id,
+            tipo_foto: "comprovacao_apr",
+            descricao: "Foto de comprovação da APR",
+            storage_path: path,
+            arquivo_nome: nomeSeguro,
+            mime_type: "image/webp",
+            tamanho_bytes: foto.tamanho_comprimido_bytes,
+            largura: foto.largura,
+            altura: foto.altura,
+            tamanho_original_bytes: foto.tamanho_original_bytes,
+            tamanho_comprimido_bytes: foto.tamanho_comprimido_bytes
+          });
+
+        if (dbError) {
+          setMsg("novaAprMsg", "err", "Foto enviada, mas erro ao salvar no banco: " + dbError.message);
+          return false;
+        }
+      }
+
+      fotosPendentesApr.forEach(f => {
+        if (f.preview_url) URL.revokeObjectURL(f.preview_url);
+      });
+
+      fotosPendentesApr = [];
+      await carregarFotosApr(aprId);
+      return true;
+    }
+
+
     async function salvarApr() {
       clearMsg("novaAprMsg");
 
@@ -2169,6 +2517,12 @@
         return;
       }
 
+      const uploadOk = await uploadFotosApr(aprId, aprNumero);
+
+      if (!uploadOk) {
+        return;
+      }
+
       await supabaseClient.from("apr_linha_tempo").insert({
         apr_id: aprId,
         usuario_id: usuarioAtual.id,
@@ -2291,6 +2645,8 @@
         .from("apr_checklist_respostas")
         .select("*")
         .eq("apr_id", id);
+
+      await carregarFotosApr(id);
 
       aprEditandoId = id;
       checklistAnswers = {};
