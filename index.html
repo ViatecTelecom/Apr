@@ -1730,64 +1730,68 @@
     }
 
     function renderTecnicosNovaApr() {
-      const box = document.getElementById("listaTecnicosNovaApr");
-      const selectedBox = document.getElementById("tecnicosSelecionadosApr");
+  const box = document.getElementById("listaTecnicosNovaApr");
+  const selectedBox = document.getElementById("tecnicosSelecionadosApr");
 
-      if (!box) return;
+  if (!box) return;
 
-      const termo = (document.getElementById("buscaTecnicoApr")?.value || "").toLowerCase().trim();
-      const ativos = tecnicosCache.filter(t => t.ativo);
+  const termo = (document.getElementById("buscaTecnicoApr")?.value || "").toLowerCase().trim();
+  const ativos = tecnicosCache.filter(t => t.ativo);
 
-      if (!ativos.length) {
-        box.innerHTML = `<div class="small danger-text">Nenhum técnico ativo cadastrado. Cadastre em Técnicos.</div>`;
-        if (selectedBox) selectedBox.innerHTML = "";
-        return;
-      }
+  if (!ativos.length) {
+    box.innerHTML = `<div class="small danger-text">Nenhum técnico ativo cadastrado. Cadastre em Técnicos.</div>`;
+    if (selectedBox) selectedBox.innerHTML = "";
+    return;
+  }
 
-      const selecionados = ativos.filter(t => tecnicosSelecionadosApr.has(t.id));
+  const selecionados = ativos.filter(t => tecnicosSelecionadosApr.has(t.id));
 
-      if (selectedBox) {
-        selectedBox.innerHTML = selecionados.length
-          ? selecionados.map(t => `
-              <span class="selected-tech">
-                ${escapeHtml(t.nome)}
-                <button type="button" onclick="removerTecnicoSelecionado('${t.id}')">×</button>
-              </span>
-            `).join("")
-          : `<div class="small">Nenhum técnico selecionado ainda.</div>`;
-      }
+  if (selectedBox) {
+    selectedBox.innerHTML = selecionados.length
+      ? selecionados.map(t => `
+          <span class="selected-tech">
+            ${escapeHtml(t.nome)}
+            <button type="button" onclick="removerTecnicoSelecionado('${t.id}')">×</button>
+          </span>
+        `).join("")
+      : `<div class="small">Nenhum técnico selecionado ainda.</div>`;
+  }
 
-      let filtrados = ativos;
+  if (!termo) {
+    box.innerHTML = `
+      <div class="small" style="padding:10px;">
+        Digite o nome, cargo ou telefone do técnico para pesquisar.
+      </div>
+    `;
+    return;
+  }
 
-      if (termo) {
-        filtrados = ativos.filter(t =>
-          String(t.nome || "").toLowerCase().includes(termo) ||
-          String(t.cargo || "").toLowerCase().includes(termo) ||
-          String(t.telefone || "").toLowerCase().includes(termo)
-        );
-      } else {
-        filtrados = ativos.slice(0, 8);
-      }
+  const filtrados = ativos.filter(t =>
+    String(t.nome || "").toLowerCase().includes(termo) ||
+    String(t.cargo || "").toLowerCase().includes(termo) ||
+    String(t.telefone || "").toLowerCase().includes(termo)
+  );
 
-      if (!filtrados.length) {
-        box.innerHTML = `<div class="small danger-text">Nenhum técnico encontrado com essa pesquisa.</div>`;
-        return;
-      }
+  if (!filtrados.length) {
+    box.innerHTML = `<div class="small danger-text" style="padding:10px;">Nenhum técnico encontrado com essa pesquisa.</div>`;
+    return;
+  }
 
-      box.innerHTML = filtrados.map(t => {
-        const checked = tecnicosSelecionadosApr.has(t.id) ? "checked" : "";
+  box.innerHTML = filtrados.map(t => {
+    const checked = tecnicosSelecionadosApr.has(t.id) ? "checked" : "";
 
-        return `
-          <div class="tecnico-option" onclick="toggleTecnicoApr('${t.id}')">
-            <input type="checkbox" class="tecAprCheck" id="tec_${t.id}" value="${t.id}" ${checked} onclick="event.stopPropagation(); toggleTecnicoApr('${t.id}');">
-            <label for="tec_${t.id}">
-              <strong>${escapeHtml(t.nome)}</strong><br>
-              <span class="small">${escapeHtml(t.cargo || "Técnico")}</span>
-            </label>
-          </div>
-        `;
-      }).join("");
-    }
+    return `
+      <div class="tecnico-option" onclick="toggleTecnicoApr('${t.id}')">
+        <input type="checkbox" class="tecAprCheck" id="tec_${t.id}" value="${t.id}" ${checked} onclick="event.stopPropagation(); toggleTecnicoApr('${t.id}');">
+        <label for="tec_${t.id}">
+          <strong>${escapeHtml(t.nome)}</strong><br>
+          <span class="small">${escapeHtml(t.cargo || "Técnico")}</span>
+        </label>
+      </div>
+    `;
+  }).join("");
+}
+   
 
     function toggleTecnicoApr(id) {
       if (tecnicosSelecionadosApr.has(id)) {
