@@ -2071,8 +2071,16 @@
       checklistAnswers = {};
       checklistIndex = 0;
 
+      fotosPendentesApr.forEach(f => {
+        if (f.preview_url) URL.revokeObjectURL(f.preview_url);
+      });
+
+      fotosPendentesApr = [];
+      fotosExistentesApr = [];
+
       toggleOutroServico();
       renderTecnicosNovaApr();
+      renderFotosApr();
       renderWizard();
       clearMsg("novaAprMsg");
     }
@@ -2531,7 +2539,7 @@
         dados: { tecnicos: tecnicosSelecionados.map(t => t.nome) }
       });
 
-      setMsg("novaAprMsg", "ok", `APR ${aprNumero || ""} salva com sucesso.`);
+      const msgSucesso = `APR ${aprNumero || ""} salva com sucesso.`;
 
       aprEditandoId = null;
       document.getElementById("tituloNovaApr").textContent = "Nova APR";
@@ -2539,6 +2547,7 @@
       document.getElementById("btnCancelarEdicaoApr").classList.add("hidden");
 
       limparFormularioApr();
+      setMsg("novaAprMsg", "ok", msgSucesso);
       await carregarAprs();
       await atualizarDashboard();
     }
@@ -2694,8 +2703,22 @@
       const { data: apr } = await supabaseClient.from("aprs").select("*").eq("id", id).single();
       const { data: tecs } = await supabaseClient.from("apr_tecnicos").select("*").eq("apr_id", id);
       const { data: respostas } = await supabaseClient.from("apr_checklist_respostas").select("*").eq("apr_id", id).order("ordem");
+      const { data: fotos } = await supabaseClient.from("apr_fotos").select("*").eq("apr_id", id).order("enviada_em", { ascending: true });
 
       if (!apr) return;
+
+      const fotosComUrl = [];
+      for (const foto of (fotos || [])) {
+        const { data: signed } = await supabaseClient
+          .storage
+          .from("apr-arquivos")
+          .createSignedUrl(foto.storage_path, 60 * 60);
+
+        fotosComUrl.push({
+          ...foto,
+          signed_url: signed?.signedUrl || ""
+        });
+      }
 
       document.getElementById("conteudoDetalhesApr").innerHTML = `
         <div class="form-section">
@@ -2712,6 +2735,24 @@
           ${(tecs || []).map(t => `
             <p>• ${escapeHtml(t.nome_tecnico)} ${t.responsavel ? "<strong>(Responsável)</strong>" : ""} — ${t.assinado ? "Assinado" : "Pendente"}</p>
           `).join("") || "<p>Nenhum técnico vinculado.</p>"}
+        </div>
+
+        <div class="form-section">
+          <h4>Fotos de comprovação</h4>
+          ${fotosComUrl.length ? `
+            <div class="foto-grid">
+              ${fotosComUrl.map(f => `
+                <div class="foto-card">
+                  <img src="${f.signed_url}" alt="Foto de comprovação da APR">
+                  <div class="foto-card-body">
+                    <strong>${escapeHtml(f.arquivo_nome || "Foto")}</strong>
+                    <span class="small">${formatBytes(f.tamanho_bytes)}</span>
+                    <span class="small">Enviada em: ${formatarData(f.enviada_em)}</span>
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          ` : `<p>Nenhuma foto vinculada a esta APR.</p>`}
         </div>
 
         <div class="form-section">
