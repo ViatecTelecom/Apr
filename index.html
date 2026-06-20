@@ -21,13 +21,12 @@
       --erro: #d92d20;
       --alerta: #f79009;
       --ok: #039855;
+      --cinza: #f8fafc;
       --sombra: 0 14px 35px rgba(16, 24, 40, 0.10);
       --radius: 18px;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -36,9 +35,7 @@
       color: var(--texto);
     }
 
-    .hidden {
-      display: none !important;
-    }
+    .hidden { display: none !important; }
 
     .login-page {
       min-height: 100vh;
@@ -62,10 +59,7 @@
       border: 1px solid rgba(208, 213, 221, 0.75);
     }
 
-    .logo-area {
-      text-align: center;
-      margin-bottom: 24px;
-    }
+    .logo-area { text-align: center; margin-bottom: 24px; }
 
     .logo-area img {
       max-width: 180px;
@@ -129,9 +123,7 @@
       min-height: 90px;
     }
 
-    .field {
-      margin-bottom: 16px;
-    }
+    .field { margin-bottom: 16px; }
 
     .btn {
       border: none;
@@ -180,9 +172,13 @@
       border: 1px solid #ffdad6;
     }
 
-    .btn-full {
-      width: 100%;
+    .btn-warning {
+      background: #fffaeb;
+      color: #b54708;
+      border: 1px solid #fedf89;
     }
+
+    .btn-full { width: 100%; }
 
     .msg {
       padding: 12px 14px;
@@ -270,10 +266,7 @@
       margin-bottom: 18px;
     }
 
-    .user-name {
-      font-weight: 800;
-      margin-bottom: 4px;
-    }
+    .user-name { font-weight: 800; margin-bottom: 4px; }
 
     .user-role {
       font-size: 13px;
@@ -333,13 +326,8 @@
       gap: 18px;
     }
 
-    .grid-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .grid-3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
     .card {
       background: white;
@@ -411,6 +399,12 @@
       border-color: #fecdca;
     }
 
+    .badge.inativo {
+      background: #f2f4f7;
+      color: #344054;
+      border-color: #d0d5dd;
+    }
+
     .table-wrap {
       overflow-x: auto;
       border-radius: 16px;
@@ -420,7 +414,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 760px;
+      min-width: 820px;
       background: white;
     }
 
@@ -438,9 +432,7 @@
       font-weight: 900;
     }
 
-    tr:last-child td {
-      border-bottom: none;
-    }
+    tr:last-child td { border-bottom: none; }
 
     .form-section {
       border: 1px solid #e4e7ec;
@@ -455,68 +447,10 @@
       color: var(--azul-escuro);
     }
 
-    .checklist-group {
-      margin-bottom: 18px;
-      border: 1px solid #e4e7ec;
-      border-radius: 16px;
-      overflow: hidden;
-      background: white;
-    }
-
-    .checklist-title {
-      background: #f8fafc;
-      padding: 12px 14px;
-      font-weight: 900;
-      color: var(--azul-escuro);
-      border-bottom: 1px solid #e4e7ec;
-    }
-
-    .checklist-item {
-      padding: 14px;
-      border-bottom: 1px solid #eaecf0;
-      display: grid;
-      grid-template-columns: 1fr 180px;
-      gap: 12px;
-      align-items: center;
-    }
-
-    .checklist-item:last-child {
-      border-bottom: none;
-    }
-
-    .checklist-question {
-      font-weight: 700;
-      font-size: 14px;
-      line-height: 1.35;
-    }
-
-    .checks {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-      flex-wrap: wrap;
-    }
-
-    .checks label {
-      margin: 0;
-      font-weight: 800;
-      font-size: 13px;
-      border: 1px solid #d0d5dd;
-      padding: 7px 9px;
-      border-radius: 999px;
-      cursor: pointer;
-      background: white;
-    }
-
-    .checks input {
-      width: auto;
-      margin-right: 4px;
-    }
-
     .tecnico-lista {
       display: grid;
       gap: 8px;
-      max-height: 220px;
+      max-height: 260px;
       overflow-y: auto;
       padding: 8px;
       background: white;
@@ -561,9 +495,7 @@
       justify-content: space-between;
     }
 
-    .mobile-top strong {
-      font-size: 16px;
-    }
+    .mobile-top strong { font-size: 16px; }
 
     .small {
       font-size: 12px;
@@ -575,14 +507,192 @@
       font-weight: 800;
     }
 
-    @media (max-width: 900px) {
-      .app {
-        grid-template-columns: 1fr;
-      }
+    .row-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
-      .mobile-top {
-        display: flex;
-      }
+    .btn-mini {
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+
+    .wizard-box {
+      background: white;
+      border: 1px solid #d0d5dd;
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 8px 20px rgba(16, 24, 40, 0.05);
+    }
+
+    .wizard-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .wizard-title {
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--azul);
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      margin-bottom: 8px;
+    }
+
+    .wizard-question {
+      font-size: 22px;
+      line-height: 1.35;
+      font-weight: 900;
+      color: var(--texto);
+      margin-bottom: 10px;
+    }
+
+    .wizard-progress {
+      height: 10px;
+      background: #eaecf0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+
+    .wizard-progress-fill {
+      height: 100%;
+      background: linear-gradient(135deg, var(--azul), var(--verde));
+      width: 0%;
+      transition: .2s;
+    }
+
+    .answer-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .answer-btn {
+      border: 2px solid #d0d5dd;
+      background: #fff;
+      border-radius: 18px;
+      padding: 18px 12px;
+      font-size: 17px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: .18s;
+      color: #344054;
+    }
+
+    .answer-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(16,24,40,.08);
+    }
+
+    .answer-btn.selected.s {
+      border-color: var(--ok);
+      background: #ecfdf3;
+      color: #027a48;
+    }
+
+    .answer-btn.selected.n {
+      border-color: var(--erro);
+      background: #fff1f0;
+      color: #b42318;
+    }
+
+    .answer-btn.selected.na {
+      border-color: var(--alerta);
+      background: #fffaeb;
+      color: #b54708;
+    }
+
+    .wizard-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .question-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 14px;
+    }
+
+    .dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      border: 1px solid #d0d5dd;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 900;
+      background: #fff;
+      color: #667085;
+    }
+
+    .dot.done { background: #ecfdf3; color: #027a48; border-color: #abefc6; }
+    .dot.current { background: #eff8ff; color: #175cd3; border-color: #b2ddff; }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 16, 32, .55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 18px;
+    }
+
+    .modal {
+      background: white;
+      width: 100%;
+      max-width: 680px;
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: var(--sombra);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      color: var(--azul-escuro);
+    }
+
+    .rule-card {
+      border: 1px solid #e4e7ec;
+      border-radius: 16px;
+      padding: 14px;
+      background: #fcfcfd;
+      margin-bottom: 10px;
+    }
+
+    .rule-card strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+
+      .mobile-top { display: flex; }
 
       .sidebar {
         position: fixed;
@@ -594,13 +704,9 @@
         transition: 0.22s;
       }
 
-      .sidebar.open {
-        left: 0;
-      }
+      .sidebar.open { left: 0; }
 
-      .main {
-        padding: 16px;
-      }
+      .main { padding: 16px; }
 
       .topbar {
         align-items: flex-start;
@@ -608,27 +714,20 @@
       }
 
       .grid-2,
-      .grid-3 {
+      .grid-3,
+      .filters,
+      .answer-buttons {
         grid-template-columns: 1fr;
       }
 
-      .filters {
-        grid-template-columns: 1fr;
-      }
-
-      .checklist-item {
-        grid-template-columns: 1fr;
-      }
-
-      .checks {
-        justify-content: flex-start;
+      .wizard-question {
+        font-size: 19px;
       }
     }
   </style>
 </head>
 
 <body>
-  <!-- LOGIN -->
   <section id="loginPage" class="login-page">
     <div class="login-card">
       <div class="logo-area">
@@ -649,12 +748,10 @@
       </div>
 
       <button class="btn btn-primary btn-full" onclick="login()">Entrar</button>
-
       <div id="loginMsg" class="msg"></div>
     </div>
   </section>
 
-  <!-- APP -->
   <section id="appPage" class="hidden">
     <div class="mobile-top">
       <strong>APR Digital</strong>
@@ -682,19 +779,19 @@
           <button id="navNovaApr" onclick="showTab('novaApr')">Nova APR</button>
           <button id="navHistorico" onclick="showTab('historico')">Histórico de APRs</button>
           <button id="navTecnicos" onclick="showTab('tecnicos')">Técnicos</button>
+          <button id="navRegras" onclick="showTab('regras')">Regras da APR</button>
           <button onclick="logout()">Sair</button>
         </nav>
       </aside>
 
       <main class="main">
-        <!-- DASHBOARD -->
         <section id="tabDashboard">
           <div class="topbar">
             <div>
               <h2>Dashboard</h2>
               <p>Resumo geral das APRs e atividades.</p>
             </div>
-            <button class="btn btn-green" onclick="showTab('novaApr')">+ Nova APR</button>
+            <button class="btn btn-green" onclick="novaAprLimpa()">+ Nova APR</button>
           </div>
 
           <div class="grid grid-3">
@@ -719,23 +816,16 @@
               </div>
             </div>
           </div>
-
-          <div class="card" style="margin-top:18px;">
-            <h3>Próximas etapas do sistema</h3>
-            <p class="small">
-              Nesta V1 validamos login, técnicos, criação da APR e checklist.
-              Na próxima etapa entram fotos de comprovação, assinatura individual, PDF e controle de início do serviço.
-            </p>
-          </div>
         </section>
 
-        <!-- NOVA APR -->
         <section id="tabNovaApr" class="hidden">
           <div class="topbar">
             <div>
-              <h2>Nova APR</h2>
-              <p>Preencha os dados da OS e da atividade antes de iniciar o serviço.</p>
+              <h2 id="tituloNovaApr">Nova APR</h2>
+              <p>Preencha os dados da OS e responda o questionário antes de iniciar o serviço.</p>
             </div>
+
+            <button id="btnCancelarEdicaoApr" class="btn btn-light hidden" onclick="novaAprLimpa()">Cancelar edição</button>
           </div>
 
           <div class="card">
@@ -806,18 +896,15 @@
 
             <div class="form-section">
               <h4>Técnicos envolvidos</h4>
-              <p class="small">
-                Selecione todos os técnicos que irão participar. Na próxima etapa, todos precisarão assinar individualmente.
-              </p>
+              <p class="small">Selecione todos os técnicos que irão participar. Todos precisarão assinar individualmente depois.</p>
               <div id="listaTecnicosNovaApr" class="tecnico-lista"></div>
             </div>
 
             <div class="form-section">
-              <h4>Checklist da APR</h4>
-              <p class="small">
-                Este checklist foi montado com base no modelo da APR enviada.
-              </p>
-              <div id="checklistContainer"></div>
+              <h4>Questionário da APR</h4>
+              <p class="small">Responda uma pergunta por vez. Use Sim, Não ou Não se aplica conforme a atividade.</p>
+
+              <div id="wizardContainer"></div>
             </div>
 
             <div class="form-section">
@@ -825,17 +912,16 @@
               <textarea id="aprObservacoes" placeholder="Informe observações, pendências ou detalhes da análise de risco"></textarea>
             </div>
 
-            <button class="btn btn-primary" onclick="salvarApr()">Salvar APR</button>
+            <button id="btnSalvarApr" class="btn btn-primary" onclick="salvarApr()">Salvar APR</button>
             <div id="novaAprMsg" class="msg"></div>
           </div>
         </section>
 
-        <!-- HISTÓRICO -->
         <section id="tabHistorico" class="hidden">
           <div class="topbar">
             <div>
               <h2>Histórico de APRs</h2>
-              <p>Consulte APRs por OS, cliente, data e status.</p>
+              <p>Consulte e edite APRs ainda não finalizadas.</p>
             </div>
           </div>
 
@@ -878,30 +964,30 @@
                     <th>Serviço</th>
                     <th>Status</th>
                     <th>Criada em</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody id="tbodyAprs">
-                  <tr>
-                    <td colspan="6">Carregando...</td>
-                  </tr>
+                  <tr><td colspan="7">Carregando...</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
         </section>
 
-        <!-- TÉCNICOS -->
         <section id="tabTecnicos" class="hidden">
           <div class="topbar">
             <div>
               <h2>Técnicos</h2>
-              <p>Cadastre os técnicos que poderão ser adicionados nas APRs.</p>
+              <p>Cadastre e edite os técnicos que poderão ser adicionados nas APRs.</p>
             </div>
           </div>
 
           <div class="grid grid-2">
             <div class="card">
-              <h3>Novo técnico</h3>
+              <h3 id="tituloFormTecnico">Novo técnico</h3>
+
+              <input type="hidden" id="tecIdEditando">
 
               <div class="field">
                 <label>Nome completo</label>
@@ -918,13 +1004,20 @@
                 <input id="tecTelefone" placeholder="Telefone/WhatsApp">
               </div>
 
-              <button class="btn btn-primary" onclick="salvarTecnico()">Cadastrar técnico</button>
-              <div id="tecMsg" class="msg"></div>
+              <div class="field">
+                <label>Status</label>
+                <select id="tecAtivo">
+                  <option value="true">Ativo</option>
+                  <option value="false">Inativo</option>
+                </select>
+              </div>
 
-              <p class="small" style="margin-top:14px;">
-                Nesta primeira versão, este cadastro cria o técnico para seleção na APR.
-                O login individual do técnico será vinculado na próxima etapa, usando o Supabase Authentication.
-              </p>
+              <div class="row-actions">
+                <button id="btnSalvarTecnico" class="btn btn-primary" onclick="salvarTecnico()">Cadastrar técnico</button>
+                <button id="btnCancelarTecnico" class="btn btn-light hidden" onclick="limparFormTecnico()">Cancelar edição</button>
+              </div>
+
+              <div id="tecMsg" class="msg"></div>
             </div>
 
             <div class="card">
@@ -937,15 +1030,104 @@
                       <th>Nome</th>
                       <th>Cargo</th>
                       <th>Status</th>
+                      <th>Ações</th>
                     </tr>
                   </thead>
                   <tbody id="tbodyTecnicos">
-                    <tr>
-                      <td colspan="3">Carregando...</td>
-                    </tr>
+                    <tr><td colspan="4">Carregando...</td></tr>
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tabRegras" class="hidden">
+          <div class="topbar">
+            <div>
+              <h2>Regras da APR</h2>
+              <p>Adicione, edite ou inative perguntas do checklist da APR.</p>
+            </div>
+          </div>
+
+          <div class="grid grid-2">
+            <div class="card">
+              <h3 id="tituloFormRegra">Nova regra/pergunta</h3>
+
+              <input type="hidden" id="regraIdEditando">
+
+              <div class="field">
+                <label>Grupo</label>
+                <input id="regraGrupo" list="gruposChecklist" placeholder="Ex: Equipamentos / EPIs">
+                <datalist id="gruposChecklist"></datalist>
+              </div>
+
+              <div class="field">
+                <label>Ordem</label>
+                <input id="regraOrdem" type="number" min="1" placeholder="Ex: 33">
+              </div>
+
+              <div class="field">
+                <label>Pergunta</label>
+                <textarea id="regraPergunta" placeholder="Digite a pergunta/regra da APR"></textarea>
+              </div>
+
+              <div class="grid grid-2">
+                <div class="field">
+                  <label>Permite N/A?</label>
+                  <select id="regraAceitaNa">
+                    <option value="true">Sim</option>
+                    <option value="false">Não</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label>Status</label>
+                  <select id="regraAtiva">
+                    <option value="true">Ativa</option>
+                    <option value="false">Inativa</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-2">
+                <div class="field">
+                  <label>Se marcar NÃO, exige observação?</label>
+                  <select id="regraExigeObs">
+                    <option value="false">Não</option>
+                    <option value="true">Sim</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label>Se marcar NÃO, bloqueia finalização?</label>
+                  <select id="regraBloqueia">
+                    <option value="false">Não</option>
+                    <option value="true">Sim</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Criticidade</label>
+                <select id="regraCriticidade">
+                  <option value="normal">Normal</option>
+                  <option value="atencao">Atenção</option>
+                  <option value="critica">Crítica</option>
+                </select>
+              </div>
+
+              <div class="row-actions">
+                <button id="btnSalvarRegra" class="btn btn-primary" onclick="salvarRegra()">Salvar regra</button>
+                <button id="btnCancelarRegra" class="btn btn-light hidden" onclick="limparFormRegra()">Cancelar edição</button>
+              </div>
+
+              <div id="regraMsg" class="msg"></div>
+            </div>
+
+            <div class="card">
+              <h3>Regras cadastradas</h3>
+              <div id="listaRegras"></div>
             </div>
           </div>
         </section>
@@ -953,16 +1135,30 @@
     </div>
   </section>
 
+  <div id="modalDetalhesApr" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Detalhes da APR</h3>
+        <button class="btn btn-light btn-mini" onclick="fecharModalApr()">Fechar</button>
+      </div>
+      <div id="conteudoDetalhesApr"></div>
+    </div>
+  </div>
+
   <script>
     const SUPABASE_URL = "https://xepcbnwcuehfxdlqnonp.supabase.co";
     const SUPABASE_KEY = "sb_publishable_jo9nWMtk0y0pg3HqaDbXVQ_oCrCaW3Z";
-
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let usuarioAtual = null;
     let perfilAtual = null;
     let tecnicosCache = [];
     let checklistModeloCache = [];
+    let aprsCache = [];
+
+    let checklistIndex = 0;
+    let checklistAnswers = {};
+    let aprEditandoId = null;
 
     document.addEventListener("DOMContentLoaded", async () => {
       await verificarSessao();
@@ -985,6 +1181,19 @@
       return new Date(data).toLocaleString("pt-BR");
     }
 
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function boolFromSelect(id) {
+      return document.getElementById(id).value === "true";
+    }
+
     function labelStatus(status) {
       const map = {
         rascunho: "Rascunho",
@@ -996,6 +1205,16 @@
         fora_do_padrao: "Fora do padrão"
       };
       return map[status] || status || "-";
+    }
+
+    function formatarTipoServico(tipo, outros) {
+      const map = {
+        instalacao_remontagem: "Instalação / Remontagem",
+        manutencao_rede: "Manutenção de Rede",
+        suporte_tecnico: "Suporte Técnico",
+        outros: outros || "Outros"
+      };
+      return map[tipo] || "-";
     }
 
     async function verificarSessao() {
@@ -1071,6 +1290,8 @@
       document.getElementById("userNome").textContent = perfilAtual?.nome || "Usuário";
       document.getElementById("userPerfil").textContent = perfilAtual?.perfil === "admin" ? "Administrador" : "Técnico";
 
+      document.getElementById("navRegras").style.display = perfilAtual?.perfil === "admin" ? "block" : "none";
+
       await carregarDadosIniciais();
       showTab("dashboard");
     }
@@ -1107,12 +1328,8 @@
     }
 
     function showTab(tab) {
-      const tabs = ["Dashboard", "NovaApr", "Historico", "Tecnicos"];
-
-      tabs.forEach(t => {
-        document.getElementById("tab" + t).classList.add("hidden");
-      });
-
+      const tabs = ["Dashboard", "NovaApr", "Historico", "Tecnicos", "Regras"];
+      tabs.forEach(t => document.getElementById("tab" + t).classList.add("hidden"));
       document.querySelectorAll(".nav button").forEach(btn => btn.classList.remove("active"));
 
       if (tab === "dashboard") {
@@ -1125,7 +1342,7 @@
         document.getElementById("tabNovaApr").classList.remove("hidden");
         document.getElementById("navNovaApr").classList.add("active");
         renderTecnicosNovaApr();
-        renderChecklist();
+        renderWizard();
       }
 
       if (tab === "historico") {
@@ -1138,6 +1355,16 @@
         document.getElementById("tabTecnicos").classList.remove("hidden");
         document.getElementById("navTecnicos").classList.add("active");
         carregarTecnicos();
+      }
+
+      if (tab === "regras") {
+        if (perfilAtual?.perfil !== "admin") {
+          alert("Somente admin pode acessar as regras.");
+          return;
+        }
+        document.getElementById("tabRegras").classList.remove("hidden");
+        document.getElementById("navRegras").classList.add("active");
+        renderRegras();
       }
 
       document.getElementById("sidebar").classList.remove("open");
@@ -1165,7 +1392,7 @@
       if (!tbody) return;
 
       if (!tecnicosCache.length) {
-        tbody.innerHTML = `<tr><td colspan="3">Nenhum técnico cadastrado.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4">Nenhum técnico cadastrado.</td></tr>`;
         return;
       }
 
@@ -1173,9 +1400,93 @@
         <tr>
           <td><strong>${escapeHtml(t.nome)}</strong></td>
           <td>${escapeHtml(t.cargo || "-")}</td>
-          <td>${t.ativo ? '<span class="badge finalizada">Ativo</span>' : '<span class="badge cancelada">Inativo</span>'}</td>
+          <td>${t.ativo ? '<span class="badge finalizada">Ativo</span>' : '<span class="badge inativo">Inativo</span>'}</td>
+          <td>
+            <div class="row-actions">
+              <button class="btn btn-light btn-mini" onclick="editarTecnico('${t.id}')">Editar</button>
+            </div>
+          </td>
         </tr>
       `).join("");
+    }
+
+    function editarTecnico(id) {
+      if (perfilAtual?.perfil !== "admin") {
+        alert("Somente admin pode editar técnicos.");
+        return;
+      }
+
+      const t = tecnicosCache.find(x => x.id === id);
+      if (!t) return;
+
+      document.getElementById("tecIdEditando").value = t.id;
+      document.getElementById("tecNome").value = t.nome || "";
+      document.getElementById("tecCargo").value = t.cargo || "";
+      document.getElementById("tecTelefone").value = t.telefone || "";
+      document.getElementById("tecAtivo").value = String(!!t.ativo);
+
+      document.getElementById("tituloFormTecnico").textContent = "Editando técnico";
+      document.getElementById("btnSalvarTecnico").textContent = "Salvar alterações";
+      document.getElementById("btnCancelarTecnico").classList.remove("hidden");
+
+      clearMsg("tecMsg");
+    }
+
+    function limparFormTecnico() {
+      document.getElementById("tecIdEditando").value = "";
+      document.getElementById("tecNome").value = "";
+      document.getElementById("tecCargo").value = "Técnico/Auxiliar de Telecomunicações";
+      document.getElementById("tecTelefone").value = "";
+      document.getElementById("tecAtivo").value = "true";
+
+      document.getElementById("tituloFormTecnico").textContent = "Novo técnico";
+      document.getElementById("btnSalvarTecnico").textContent = "Cadastrar técnico";
+      document.getElementById("btnCancelarTecnico").classList.add("hidden");
+      clearMsg("tecMsg");
+    }
+
+    async function salvarTecnico() {
+      clearMsg("tecMsg");
+
+      if (perfilAtual?.perfil !== "admin") {
+        setMsg("tecMsg", "err", "Somente admin pode cadastrar ou editar técnicos.");
+        return;
+      }
+
+      const id = document.getElementById("tecIdEditando").value;
+      const nome = document.getElementById("tecNome").value.trim();
+      const cargo = document.getElementById("tecCargo").value.trim();
+      const telefone = document.getElementById("tecTelefone").value.trim();
+      const ativo = document.getElementById("tecAtivo").value === "true";
+
+      if (!nome) {
+        setMsg("tecMsg", "err", "Informe o nome do técnico.");
+        return;
+      }
+
+      let error;
+
+      if (id) {
+        const res = await supabaseClient
+          .from("tecnicos")
+          .update({ nome, cargo, telefone, ativo })
+          .eq("id", id);
+        error = res.error;
+      } else {
+        const res = await supabaseClient
+          .from("tecnicos")
+          .insert({ nome, cargo, telefone, ativo });
+        error = res.error;
+      }
+
+      if (error) {
+        setMsg("tecMsg", "err", "Erro ao salvar técnico: " + error.message);
+        return;
+      }
+
+      setMsg("tecMsg", "ok", id ? "Técnico atualizado com sucesso." : "Técnico cadastrado com sucesso.");
+      limparFormTecnico();
+      await carregarTecnicos();
     }
 
     function renderTecnicosNovaApr() {
@@ -1200,50 +1511,10 @@
       `).join("");
     }
 
-    async function salvarTecnico() {
-      clearMsg("tecMsg");
-
-      if (perfilAtual?.perfil !== "admin") {
-        setMsg("tecMsg", "err", "Somente admin pode cadastrar técnicos.");
-        return;
-      }
-
-      const nome = document.getElementById("tecNome").value.trim();
-      const cargo = document.getElementById("tecCargo").value.trim();
-      const telefone = document.getElementById("tecTelefone").value.trim();
-
-      if (!nome) {
-        setMsg("tecMsg", "err", "Informe o nome do técnico.");
-        return;
-      }
-
-      const { error } = await supabaseClient
-        .from("tecnicos")
-        .insert({
-          nome,
-          cargo,
-          telefone,
-          ativo: true
-        });
-
-      if (error) {
-        setMsg("tecMsg", "err", "Erro ao cadastrar técnico: " + error.message);
-        return;
-      }
-
-      document.getElementById("tecNome").value = "";
-      document.getElementById("tecCargo").value = "Técnico/Auxiliar de Telecomunicações";
-      document.getElementById("tecTelefone").value = "";
-
-      setMsg("tecMsg", "ok", "Técnico cadastrado com sucesso.");
-      await carregarTecnicos();
-    }
-
     async function carregarChecklistModelo() {
       const { data, error } = await supabaseClient
         .from("apr_checklist_modelo")
         .select("*")
-        .eq("ativo", true)
         .order("ordem", { ascending: true });
 
       if (error) {
@@ -1252,39 +1523,122 @@
       }
 
       checklistModeloCache = data || [];
+      atualizarDatalistGrupos();
+      renderWizard();
+      renderRegras();
     }
 
-    function renderChecklist() {
-      const container = document.getElementById("checklistContainer");
+    function perguntasAtivas() {
+      return checklistModeloCache.filter(p => p.ativo);
+    }
+
+    function atualizarDatalistGrupos() {
+      const dl = document.getElementById("gruposChecklist");
+      if (!dl) return;
+
+      const grupos = [...new Set(checklistModeloCache.map(p => p.grupo).filter(Boolean))];
+      dl.innerHTML = grupos.map(g => `<option value="${escapeHtml(g)}"></option>`).join("");
+    }
+
+    function renderWizard() {
+      const container = document.getElementById("wizardContainer");
       if (!container) return;
 
-      if (!checklistModeloCache.length) {
-        container.innerHTML = `<p class="danger-text">Checklist não encontrado no banco.</p>`;
+      const perguntas = perguntasAtivas();
+
+      if (!perguntas.length) {
+        container.innerHTML = `<p class="danger-text">Nenhuma pergunta ativa encontrada.</p>`;
         return;
       }
 
-      const grupos = {};
+      if (checklistIndex >= perguntas.length) checklistIndex = perguntas.length - 1;
+      if (checklistIndex < 0) checklistIndex = 0;
 
-      checklistModeloCache.forEach(item => {
-        if (!grupos[item.grupo]) grupos[item.grupo] = [];
-        grupos[item.grupo].push(item);
-      });
+      const item = perguntas[checklistIndex];
+      const respostaAtual = checklistAnswers[item.id] || "";
+      const totalRespondidas = perguntas.filter(p => checklistAnswers[p.id]).length;
+      const progresso = Math.round((totalRespondidas / perguntas.length) * 100);
 
-      container.innerHTML = Object.keys(grupos).map(grupo => `
-        <div class="checklist-group">
-          <div class="checklist-title">${escapeHtml(grupo)}</div>
-          ${grupos[grupo].map(item => `
-            <div class="checklist-item">
-              <div class="checklist-question">${item.ordem}. ${escapeHtml(item.pergunta)}</div>
-              <div class="checks" data-check-id="${item.id}">
-                <label><input type="radio" name="check_${item.id}" value="S"> S</label>
-                <label><input type="radio" name="check_${item.id}" value="N"> N</label>
-                ${item.aceita_na ? `<label><input type="radio" name="check_${item.id}" value="NA"> N/A</label>` : ""}
-              </div>
+      container.innerHTML = `
+        <div class="wizard-box">
+          <div class="wizard-progress">
+            <div class="wizard-progress-fill" style="width:${progresso}%"></div>
+          </div>
+
+          <div class="wizard-header">
+            <div>
+              <div class="wizard-title">${escapeHtml(item.grupo)}</div>
+              <div class="wizard-question">${item.ordem}. ${escapeHtml(item.pergunta)}</div>
+              <div class="small">Pergunta ${checklistIndex + 1} de ${perguntas.length} • Respondidas: ${totalRespondidas}/${perguntas.length}</div>
             </div>
-          `).join("")}
+          </div>
+
+          <div class="answer-buttons">
+            <button type="button" class="answer-btn ${respostaAtual === 'S' ? 'selected s' : ''}" onclick="responderChecklist('${item.id}', 'S')">✓ Sim</button>
+            <button type="button" class="answer-btn ${respostaAtual === 'N' ? 'selected n' : ''}" onclick="responderChecklist('${item.id}', 'N')">✕ Não</button>
+            ${item.aceita_na ? `<button type="button" class="answer-btn ${respostaAtual === 'NA' ? 'selected na' : ''}" onclick="responderChecklist('${item.id}', 'NA')">— N/A</button>` : `<button type="button" class="answer-btn" disabled>N/A indisponível</button>`}
+          </div>
+
+          ${respostaAtual === 'N' && item.exige_observacao_se_nao ? `
+            <div class="field">
+              <label>Observação obrigatória para esta resposta</label>
+              <textarea id="obs_${item.id}" oninput="salvarObsChecklist('${item.id}')" placeholder="Explique o motivo da resposta Não">${escapeHtml(checklistAnswers[item.id + '_obs'] || '')}</textarea>
+            </div>
+          ` : ''}
+
+          ${respostaAtual === 'N' && item.bloqueia_finalizacao_se_nao ? `
+            <div class="msg err" style="display:block;">
+              Atenção: esta resposta foi marcada como bloqueio de finalização pela regra da APR.
+            </div>
+          ` : ''}
+
+          <div class="wizard-footer">
+            <button type="button" class="btn btn-light" onclick="voltarPergunta()" ${checklistIndex === 0 ? 'disabled' : ''}>Anterior</button>
+            <button type="button" class="btn btn-primary" onclick="proximaPergunta()" ${checklistIndex === perguntas.length - 1 ? 'disabled' : ''}>Próxima</button>
+          </div>
+
+          <div class="question-summary">
+            ${perguntas.map((p, idx) => `
+              <span class="dot ${idx === checklistIndex ? 'current' : ''} ${checklistAnswers[p.id] ? 'done' : ''}" title="${escapeHtml(p.pergunta)}">${idx + 1}</span>
+            `).join("")}
+          </div>
         </div>
-      `).join("");
+      `;
+    }
+
+    function responderChecklist(id, resposta) {
+      checklistAnswers[id] = resposta;
+      const perguntas = perguntasAtivas();
+      const idx = perguntas.findIndex(p => p.id === id);
+      const p = perguntas[idx];
+
+      if (resposta !== "N") {
+        delete checklistAnswers[id + "_obs"];
+      }
+
+      renderWizard();
+
+      if (idx >= 0 && idx < perguntas.length - 1) {
+        setTimeout(() => {
+          checklistIndex = idx + 1;
+          renderWizard();
+        }, 220);
+      }
+    }
+
+    function salvarObsChecklist(id) {
+      const el = document.getElementById("obs_" + id);
+      if (el) checklistAnswers[id + "_obs"] = el.value;
+    }
+
+    function voltarPergunta() {
+      checklistIndex--;
+      renderWizard();
+    }
+
+    function proximaPergunta() {
+      checklistIndex++;
+      renderWizard();
     }
 
     function toggleOutroServico() {
@@ -1294,19 +1648,43 @@
 
     function getTecnicosSelecionados() {
       const checks = [...document.querySelectorAll(".tecAprCheck:checked")];
-      return checks.map(c => {
-        return tecnicosCache.find(t => t.id === c.value);
-      }).filter(Boolean);
+      return checks.map(c => tecnicosCache.find(t => t.id === c.value)).filter(Boolean);
     }
 
     function getRespostasChecklist() {
-      return checklistModeloCache.map(item => {
-        const marcado = document.querySelector(`input[name="check_${item.id}"]:checked`);
-        return {
-          modelo: item,
-          resposta: marcado ? marcado.value : null
-        };
-      });
+      return perguntasAtivas().map(item => ({
+        modelo: item,
+        resposta: checklistAnswers[item.id] || null,
+        observacao: checklistAnswers[item.id + "_obs"] || null
+      }));
+    }
+
+    function novaAprLimpa() {
+      aprEditandoId = null;
+      limparFormularioApr();
+      document.getElementById("tituloNovaApr").textContent = "Nova APR";
+      document.getElementById("btnSalvarApr").textContent = "Salvar APR";
+      document.getElementById("btnCancelarEdicaoApr").classList.add("hidden");
+      showTab("novaApr");
+    }
+
+    function limparFormularioApr() {
+      document.getElementById("aprNumeroOs").value = "";
+      document.getElementById("aprProtocolo").value = "";
+      document.getElementById("aprCodigoCliente").value = "";
+      document.getElementById("aprClienteNome").value = "";
+      document.getElementById("aprCidadeBairro").value = "";
+      document.getElementById("aprEndereco").value = "";
+      document.getElementById("aprTipoServico").value = "";
+      document.getElementById("aprTipoServicoOutros").value = "";
+      document.getElementById("aprDescricao").value = "";
+      document.getElementById("aprObservacoes").value = "";
+      document.querySelectorAll(".tecAprCheck").forEach(c => c.checked = false);
+      checklistAnswers = {};
+      checklistIndex = 0;
+      toggleOutroServico();
+      renderWizard();
+      clearMsg("novaAprMsg");
     }
 
     async function salvarApr() {
@@ -1363,39 +1741,86 @@
 
       const incompletas = respostas.filter(r => !r.resposta);
       if (incompletas.length > 0) {
-        setMsg("novaAprMsg", "err", "Preencha todo o checklist da APR.");
+        setMsg("novaAprMsg", "err", "Responda todo o questionário da APR.");
+        return;
+      }
+
+      const obsObrigatorias = respostas.filter(r =>
+        r.resposta === "N" &&
+        r.modelo.exige_observacao_se_nao &&
+        !r.observacao
+      );
+
+      if (obsObrigatorias.length > 0) {
+        setMsg("novaAprMsg", "err", "Existe resposta Não com observação obrigatória. Volte na pergunta e preencha.");
         return;
       }
 
       const tecnicoResponsavel = tecnicosSelecionados[0];
 
-      const { data: aprCriada, error: aprError } = await supabaseClient
-        .from("aprs")
-        .insert({
-          numero_os,
-          protocolo_os,
-          codigo_cliente,
-          cliente_nome,
-          cliente_endereco,
-          cidade_bairro,
-          tipo_servico,
-          tipo_servico_outros,
-          descricao_atividade,
-          observacoes_adicionais,
-          status: "aguardando_assinaturas",
-          criada_por: usuarioAtual.id,
-          tecnico_responsavel_id: tecnicoResponsavel.id,
-          emitida_em: new Date().toISOString()
-        })
-        .select()
-        .single();
+      const payloadApr = {
+        numero_os,
+        protocolo_os,
+        codigo_cliente,
+        cliente_nome,
+        cliente_endereco,
+        cidade_bairro,
+        tipo_servico,
+        tipo_servico_outros,
+        descricao_atividade,
+        observacoes_adicionais,
+        status: "aguardando_assinaturas",
+        tecnico_responsavel_id: tecnicoResponsavel.id,
+        atualizacao_em: new Date().toISOString()
+      };
 
-      if (aprError) {
-        setMsg("novaAprMsg", "err", "Erro ao salvar APR: " + aprError.message);
-        return;
+      let aprId = aprEditandoId;
+      let aprNumero = "";
+
+      if (aprEditandoId) {
+        const { data: aprExistente } = await supabaseClient
+          .from("aprs")
+          .select("status, numero_apr")
+          .eq("id", aprEditandoId)
+          .single();
+
+        if (aprExistente && !["rascunho", "aguardando_assinaturas"].includes(aprExistente.status)) {
+          setMsg("novaAprMsg", "err", "Esta APR não pode ser editada porque já avançou no fluxo.");
+          return;
+        }
+
+        const { error: updateError } = await supabaseClient
+          .from("aprs")
+          .update(payloadApr)
+          .eq("id", aprEditandoId);
+
+        if (updateError) {
+          setMsg("novaAprMsg", "err", "Erro ao atualizar APR: " + updateError.message);
+          return;
+        }
+
+        aprNumero = aprExistente?.numero_apr || "";
+
+        await supabaseClient.from("apr_tecnicos").delete().eq("apr_id", aprId);
+        await supabaseClient.from("apr_checklist_respostas").delete().eq("apr_id", aprId);
+      } else {
+        payloadApr.criada_por = usuarioAtual.id;
+        payloadApr.emitida_em = new Date().toISOString();
+
+        const { data: aprCriada, error: aprError } = await supabaseClient
+          .from("aprs")
+          .insert(payloadApr)
+          .select()
+          .single();
+
+        if (aprError) {
+          setMsg("novaAprMsg", "err", "Erro ao salvar APR: " + aprError.message);
+          return;
+        }
+
+        aprId = aprCriada.id;
+        aprNumero = aprCriada.numero_apr;
       }
-
-      const aprId = aprCriada.id;
 
       const tecnicosInsert = tecnicosSelecionados.map((t, index) => ({
         apr_id: aprId,
@@ -1414,7 +1839,7 @@
         .insert(tecnicosInsert);
 
       if (tecAprError) {
-        setMsg("novaAprMsg", "err", "APR criada, mas erro ao vincular técnicos: " + tecAprError.message);
+        setMsg("novaAprMsg", "err", "Erro ao vincular técnicos: " + tecAprError.message);
         return;
       }
 
@@ -1425,8 +1850,10 @@
         grupo: r.modelo.grupo,
         pergunta: r.modelo.pergunta,
         resposta: r.resposta,
+        observacao: r.observacao,
         respondido_por: usuarioAtual.id,
-        respondido_em: new Date().toISOString()
+        respondido_em: new Date().toISOString(),
+        bloqueou_finalizacao: r.resposta === "N" && !!r.modelo.bloqueia_finalizacao_se_nao
       }));
 
       const { error: checkError } = await supabaseClient
@@ -1434,49 +1861,32 @@
         .insert(respostasInsert);
 
       if (checkError) {
-        setMsg("novaAprMsg", "err", "APR criada, mas erro ao salvar checklist: " + checkError.message);
+        setMsg("novaAprMsg", "err", "Erro ao salvar checklist: " + checkError.message);
         return;
       }
 
-      await supabaseClient
-        .from("apr_linha_tempo")
-        .insert({
-          apr_id: aprId,
-          usuario_id: usuarioAtual.id,
-          acao: "APR criada",
-          detalhes: `APR criada para OS ${numero_os || protocolo_os}.`,
-          dados: {
-            tecnicos: tecnicosSelecionados.map(t => t.nome)
-          }
-        });
+      await supabaseClient.from("apr_linha_tempo").insert({
+        apr_id: aprId,
+        usuario_id: usuarioAtual.id,
+        acao: aprEditandoId ? "APR editada" : "APR criada",
+        detalhes: `${aprEditandoId ? "APR editada" : "APR criada"} para OS ${numero_os || protocolo_os}.`,
+        dados: { tecnicos: tecnicosSelecionados.map(t => t.nome) }
+      });
+
+      setMsg("novaAprMsg", "ok", `APR ${aprNumero || ""} salva com sucesso.`);
+      aprEditandoId = null;
+      document.getElementById("tituloNovaApr").textContent = "Nova APR";
+      document.getElementById("btnSalvarApr").textContent = "Salvar APR";
+      document.getElementById("btnCancelarEdicaoApr").classList.add("hidden");
 
       limparFormularioApr();
-      setMsg("novaAprMsg", "ok", `APR ${aprCriada.numero_apr} criada com sucesso. Status: aguardando assinaturas.`);
       await carregarAprs();
       await atualizarDashboard();
     }
 
-    function limparFormularioApr() {
-      document.getElementById("aprNumeroOs").value = "";
-      document.getElementById("aprProtocolo").value = "";
-      document.getElementById("aprCodigoCliente").value = "";
-      document.getElementById("aprClienteNome").value = "";
-      document.getElementById("aprCidadeBairro").value = "";
-      document.getElementById("aprEndereco").value = "";
-      document.getElementById("aprTipoServico").value = "";
-      document.getElementById("aprTipoServicoOutros").value = "";
-      document.getElementById("aprDescricao").value = "";
-      document.getElementById("aprObservacoes").value = "";
-      document.querySelectorAll(".tecAprCheck").forEach(c => c.checked = false);
-      document.querySelectorAll("#checklistContainer input[type='radio']").forEach(r => r.checked = false);
-      toggleOutroServico();
-    }
-
     async function carregarAprs() {
       const tbody = document.getElementById("tbodyAprs");
-      if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="6">Carregando...</td></tr>`;
-      }
+      if (tbody) tbody.innerHTML = `<tr><td colspan="7">Carregando...</td></tr>`;
 
       const filtroOs = document.getElementById("filtroOs")?.value.trim();
       const filtroCliente = document.getElementById("filtroCliente")?.value.trim();
@@ -1488,22 +1898,18 @@
         .order("criada_em", { ascending: false })
         .limit(100);
 
-      if (filtroStatus) {
-        query = query.eq("status", filtroStatus);
-      }
-
-      if (filtroCliente) {
-        query = query.ilike("cliente_nome", `%${filtroCliente}%`);
-      }
+      if (filtroStatus) query = query.eq("status", filtroStatus);
+      if (filtroCliente) query = query.ilike("cliente_nome", `%${filtroCliente}%`);
 
       const { data, error } = await query;
 
       if (error) {
-        if (tbody) tbody.innerHTML = `<tr><td colspan="6">Erro ao carregar APRs: ${escapeHtml(error.message)}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7">Erro ao carregar APRs: ${escapeHtml(error.message)}</td></tr>`;
         return;
       }
 
       let lista = data || [];
+      aprsCache = lista;
 
       if (filtroOs) {
         const termo = filtroOs.toLowerCase();
@@ -1522,45 +1928,297 @@
       if (!tbody) return;
 
       if (!lista.length) {
-        tbody.innerHTML = `<tr><td colspan="6">Nenhuma APR encontrada.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7">Nenhuma APR encontrada.</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = lista.map(apr => `
-        <tr>
-          <td><strong>${escapeHtml(apr.numero_apr || "-")}</strong></td>
-          <td>
-            OS: ${escapeHtml(apr.numero_os || "-")}<br>
-            <span class="small">Protocolo: ${escapeHtml(apr.protocolo_os || "-")}</span>
-          </td>
-          <td>
-            <strong>${escapeHtml(apr.cliente_nome || "-")}</strong><br>
-            <span class="small">${escapeHtml(apr.cidade_bairro || "-")}</span>
-          </td>
-          <td>${escapeHtml(formatarTipoServico(apr.tipo_servico, apr.tipo_servico_outros))}</td>
-          <td><span class="badge ${apr.status}">${labelStatus(apr.status)}</span></td>
-          <td>${formatarData(apr.criada_em)}</td>
-        </tr>
+      tbody.innerHTML = lista.map(apr => {
+        const podeEditar = ["rascunho", "aguardando_assinaturas"].includes(apr.status);
+
+        return `
+          <tr>
+            <td><strong>${escapeHtml(apr.numero_apr || "-")}</strong></td>
+            <td>
+              OS: ${escapeHtml(apr.numero_os || "-")}<br>
+              <span class="small">Protocolo: ${escapeHtml(apr.protocolo_os || "-")}</span>
+            </td>
+            <td>
+              <strong>${escapeHtml(apr.cliente_nome || "-")}</strong><br>
+              <span class="small">${escapeHtml(apr.cidade_bairro || "-")}</span>
+            </td>
+            <td>${escapeHtml(formatarTipoServico(apr.tipo_servico, apr.tipo_servico_outros))}</td>
+            <td><span class="badge ${apr.status}">${labelStatus(apr.status)}</span></td>
+            <td>${formatarData(apr.criada_em)}</td>
+            <td>
+              <div class="row-actions">
+                <button class="btn btn-light btn-mini" onclick="verDetalhesApr('${apr.id}')">Ver</button>
+                ${podeEditar ? `<button class="btn btn-primary btn-mini" onclick="editarApr('${apr.id}')">Editar</button>` : `<button class="btn btn-light btn-mini" disabled>Bloqueada</button>`}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    async function editarApr(id) {
+      const { data: apr, error } = await supabaseClient
+        .from("aprs")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error || !apr) {
+        alert("Erro ao carregar APR.");
+        return;
+      }
+
+      if (!["rascunho", "aguardando_assinaturas"].includes(apr.status)) {
+        alert("Esta APR não pode ser editada porque já avançou no fluxo.");
+        return;
+      }
+
+      const { data: tecs } = await supabaseClient
+        .from("apr_tecnicos")
+        .select("*")
+        .eq("apr_id", id);
+
+      const { data: respostas } = await supabaseClient
+        .from("apr_checklist_respostas")
+        .select("*")
+        .eq("apr_id", id);
+
+      aprEditandoId = id;
+      checklistAnswers = {};
+      checklistIndex = 0;
+
+      document.getElementById("aprNumeroOs").value = apr.numero_os || "";
+      document.getElementById("aprProtocolo").value = apr.protocolo_os || "";
+      document.getElementById("aprCodigoCliente").value = apr.codigo_cliente || "";
+      document.getElementById("aprClienteNome").value = apr.cliente_nome || "";
+      document.getElementById("aprCidadeBairro").value = apr.cidade_bairro || "";
+      document.getElementById("aprEndereco").value = apr.cliente_endereco || "";
+      document.getElementById("aprTipoServico").value = apr.tipo_servico || "";
+      document.getElementById("aprTipoServicoOutros").value = apr.tipo_servico_outros || "";
+      document.getElementById("aprDescricao").value = apr.descricao_atividade || "";
+      document.getElementById("aprObservacoes").value = apr.observacoes_adicionais || "";
+      toggleOutroServico();
+
+      renderTecnicosNovaApr();
+
+      setTimeout(() => {
+        document.querySelectorAll(".tecAprCheck").forEach(c => c.checked = false);
+        (tecs || []).forEach(t => {
+          const check = document.getElementById("tec_" + t.tecnico_id);
+          if (check) check.checked = true;
+        });
+      }, 50);
+
+      (respostas || []).forEach(r => {
+        if (r.checklist_modelo_id) {
+          checklistAnswers[r.checklist_modelo_id] = r.resposta;
+          if (r.observacao) checklistAnswers[r.checklist_modelo_id + "_obs"] = r.observacao;
+        }
+      });
+
+      document.getElementById("tituloNovaApr").textContent = "Editando APR";
+      document.getElementById("btnSalvarApr").textContent = "Salvar alterações";
+      document.getElementById("btnCancelarEdicaoApr").classList.remove("hidden");
+
+      showTab("novaApr");
+      renderWizard();
+    }
+
+    async function verDetalhesApr(id) {
+      const { data: apr } = await supabaseClient.from("aprs").select("*").eq("id", id).single();
+      const { data: tecs } = await supabaseClient.from("apr_tecnicos").select("*").eq("apr_id", id);
+      const { data: respostas } = await supabaseClient.from("apr_checklist_respostas").select("*").eq("apr_id", id).order("ordem");
+
+      if (!apr) return;
+
+      document.getElementById("conteudoDetalhesApr").innerHTML = `
+        <div class="form-section">
+          <h4>${escapeHtml(apr.numero_apr || "APR")}</h4>
+          <p><strong>OS:</strong> ${escapeHtml(apr.numero_os || "-")}</p>
+          <p><strong>Protocolo:</strong> ${escapeHtml(apr.protocolo_os || "-")}</p>
+          <p><strong>Cliente:</strong> ${escapeHtml(apr.cliente_nome || "-")}</p>
+          <p><strong>Cidade/Bairro:</strong> ${escapeHtml(apr.cidade_bairro || "-")}</p>
+          <p><strong>Status:</strong> ${labelStatus(apr.status)}</p>
+        </div>
+
+        <div class="form-section">
+          <h4>Técnicos envolvidos</h4>
+          ${(tecs || []).map(t => `
+            <p>• ${escapeHtml(t.nome_tecnico)} ${t.responsavel ? "<strong>(Responsável)</strong>" : ""} — ${t.assinado ? "Assinado" : "Pendente"}</p>
+          `).join("") || "<p>Nenhum técnico vinculado.</p>"}
+        </div>
+
+        <div class="form-section">
+          <h4>Checklist</h4>
+          ${(respostas || []).map(r => `
+            <p>
+              <strong>${r.ordem}. ${escapeHtml(r.pergunta)}</strong><br>
+              Resposta: <strong>${escapeHtml(r.resposta || "-")}</strong>
+              ${r.observacao ? `<br>Obs: ${escapeHtml(r.observacao)}` : ""}
+            </p>
+          `).join("")}
+        </div>
+      `;
+
+      document.getElementById("modalDetalhesApr").classList.remove("hidden");
+    }
+
+    function fecharModalApr() {
+      document.getElementById("modalDetalhesApr").classList.add("hidden");
+    }
+
+    function renderRegras() {
+      const lista = document.getElementById("listaRegras");
+      if (!lista) return;
+
+      if (!checklistModeloCache.length) {
+        lista.innerHTML = "<p>Nenhuma regra cadastrada.</p>";
+        return;
+      }
+
+      const grupos = {};
+      checklistModeloCache.forEach(r => {
+        if (!grupos[r.grupo]) grupos[r.grupo] = [];
+        grupos[r.grupo].push(r);
+      });
+
+      lista.innerHTML = Object.keys(grupos).map(grupo => `
+        <div style="margin-bottom:18px;">
+          <h4 style="color:var(--azul-escuro);margin:0 0 10px;">${escapeHtml(grupo)}</h4>
+          ${grupos[grupo].map(r => `
+            <div class="rule-card">
+              <strong>${r.ordem}. ${escapeHtml(r.pergunta)}</strong>
+              <div class="small">
+                Status: ${r.ativo ? "Ativa" : "Inativa"} •
+                N/A: ${r.aceita_na ? "Sim" : "Não"} •
+                Criticidade: ${escapeHtml(r.criticidade || "normal")}
+              </div>
+              <div class="small">
+                Exige obs. se NÃO: ${r.exige_observacao_se_nao ? "Sim" : "Não"} •
+                Bloqueia se NÃO: ${r.bloqueia_finalizacao_se_nao ? "Sim" : "Não"}
+              </div>
+              <div class="row-actions" style="margin-top:10px;">
+                <button class="btn btn-light btn-mini" onclick="editarRegra('${r.id}')">Editar</button>
+                <button class="btn btn-warning btn-mini" onclick="alternarRegraAtiva('${r.id}', ${r.ativo ? "false" : "true"})">${r.ativo ? "Inativar" : "Ativar"}</button>
+              </div>
+            </div>
+          `).join("")}
+        </div>
       `).join("");
     }
 
-    function formatarTipoServico(tipo, outros) {
-      const map = {
-        instalacao_remontagem: "Instalação / Remontagem",
-        manutencao_rede: "Manutenção de Rede",
-        suporte_tecnico: "Suporte Técnico",
-        outros: outros || "Outros"
-      };
-      return map[tipo] || "-";
+    function editarRegra(id) {
+      const r = checklistModeloCache.find(x => x.id === id);
+      if (!r) return;
+
+      document.getElementById("regraIdEditando").value = r.id;
+      document.getElementById("regraGrupo").value = r.grupo || "";
+      document.getElementById("regraOrdem").value = r.ordem || "";
+      document.getElementById("regraPergunta").value = r.pergunta || "";
+      document.getElementById("regraAceitaNa").value = String(!!r.aceita_na);
+      document.getElementById("regraAtiva").value = String(!!r.ativo);
+      document.getElementById("regraExigeObs").value = String(!!r.exige_observacao_se_nao);
+      document.getElementById("regraBloqueia").value = String(!!r.bloqueia_finalizacao_se_nao);
+      document.getElementById("regraCriticidade").value = r.criticidade || "normal";
+
+      document.getElementById("tituloFormRegra").textContent = "Editando regra/pergunta";
+      document.getElementById("btnSalvarRegra").textContent = "Salvar alterações";
+      document.getElementById("btnCancelarRegra").classList.remove("hidden");
+      clearMsg("regraMsg");
     }
 
-    function escapeHtml(value) {
-      return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+    function limparFormRegra() {
+      document.getElementById("regraIdEditando").value = "";
+      document.getElementById("regraGrupo").value = "";
+      document.getElementById("regraOrdem").value = "";
+      document.getElementById("regraPergunta").value = "";
+      document.getElementById("regraAceitaNa").value = "true";
+      document.getElementById("regraAtiva").value = "true";
+      document.getElementById("regraExigeObs").value = "false";
+      document.getElementById("regraBloqueia").value = "false";
+      document.getElementById("regraCriticidade").value = "normal";
+
+      document.getElementById("tituloFormRegra").textContent = "Nova regra/pergunta";
+      document.getElementById("btnSalvarRegra").textContent = "Salvar regra";
+      document.getElementById("btnCancelarRegra").classList.add("hidden");
+      clearMsg("regraMsg");
+    }
+
+    async function salvarRegra() {
+      clearMsg("regraMsg");
+
+      if (perfilAtual?.perfil !== "admin") {
+        setMsg("regraMsg", "err", "Somente admin pode editar regras.");
+        return;
+      }
+
+      const id = document.getElementById("regraIdEditando").value;
+      const grupo = document.getElementById("regraGrupo").value.trim();
+      const ordem = parseInt(document.getElementById("regraOrdem").value, 10);
+      const pergunta = document.getElementById("regraPergunta").value.trim();
+
+      if (!grupo || !ordem || !pergunta) {
+        setMsg("regraMsg", "err", "Informe grupo, ordem e pergunta.");
+        return;
+      }
+
+      const payload = {
+        grupo,
+        ordem,
+        pergunta,
+        aceita_na: boolFromSelect("regraAceitaNa"),
+        ativo: boolFromSelect("regraAtiva"),
+        exige_observacao_se_nao: boolFromSelect("regraExigeObs"),
+        bloqueia_finalizacao_se_nao: boolFromSelect("regraBloqueia"),
+        criticidade: document.getElementById("regraCriticidade").value
+      };
+
+      let error;
+
+      if (id) {
+        const res = await supabaseClient
+          .from("apr_checklist_modelo")
+          .update(payload)
+          .eq("id", id);
+        error = res.error;
+      } else {
+        const res = await supabaseClient
+          .from("apr_checklist_modelo")
+          .insert(payload);
+        error = res.error;
+      }
+
+      if (error) {
+        setMsg("regraMsg", "err", "Erro ao salvar regra: " + error.message);
+        return;
+      }
+
+      setMsg("regraMsg", "ok", id ? "Regra atualizada com sucesso." : "Regra criada com sucesso.");
+      limparFormRegra();
+      await carregarChecklistModelo();
+    }
+
+    async function alternarRegraAtiva(id, ativo) {
+      if (perfilAtual?.perfil !== "admin") {
+        alert("Somente admin pode alterar regras.");
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from("apr_checklist_modelo")
+        .update({ ativo })
+        .eq("id", id);
+
+      if (error) {
+        alert("Erro ao alterar regra: " + error.message);
+        return;
+      }
+
+      await carregarChecklistModelo();
     }
   </script>
 </body>
