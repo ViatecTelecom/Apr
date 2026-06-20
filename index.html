@@ -26,7 +26,9 @@
       --radius: 18px;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
@@ -35,7 +37,9 @@
       color: var(--texto);
     }
 
-    .hidden { display: none !important; }
+    .hidden {
+      display: none !important;
+    }
 
     .login-page {
       min-height: 100vh;
@@ -59,7 +63,10 @@
       border: 1px solid rgba(208, 213, 221, 0.75);
     }
 
-    .logo-area { text-align: center; margin-bottom: 24px; }
+    .logo-area {
+      text-align: center;
+      margin-bottom: 24px;
+    }
 
     .logo-area img {
       max-width: 180px;
@@ -102,7 +109,9 @@
       font-size: 14px;
     }
 
-    input, select, textarea {
+    input,
+    select,
+    textarea {
       width: 100%;
       border: 1px solid var(--borda);
       border-radius: 12px;
@@ -113,7 +122,9 @@
       color: var(--texto);
     }
 
-    input:focus, select:focus, textarea:focus {
+    input:focus,
+    select:focus,
+    textarea:focus {
       border-color: var(--azul);
       box-shadow: 0 0 0 4px rgba(0, 87, 168, 0.12);
     }
@@ -123,7 +134,9 @@
       min-height: 90px;
     }
 
-    .field { margin-bottom: 16px; }
+    .field {
+      margin-bottom: 16px;
+    }
 
     .btn {
       border: none;
@@ -138,6 +151,7 @@
       justify-content: center;
       gap: 8px;
       text-decoration: none;
+      white-space: nowrap;
     }
 
     .btn:disabled {
@@ -178,7 +192,24 @@
       border: 1px solid #fedf89;
     }
 
-    .btn-full { width: 100%; }
+    .btn-full {
+      width: 100%;
+    }
+
+    .btn-mini {
+      padding: 7px 10px;
+      border-radius: 9px;
+      font-size: 12px;
+      line-height: 1;
+      min-height: 32px;
+    }
+
+    .btn-regra {
+      padding: 6px 9px;
+      border-radius: 9px;
+      font-size: 12px;
+      min-height: 30px;
+    }
 
     .msg {
       padding: 12px 14px;
@@ -266,7 +297,10 @@
       margin-bottom: 18px;
     }
 
-    .user-name { font-weight: 800; margin-bottom: 4px; }
+    .user-name {
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
 
     .user-role {
       font-size: 13px;
@@ -326,8 +360,13 @@
       gap: 18px;
     }
 
-    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 
     .card {
       background: white;
@@ -418,7 +457,8 @@
       background: white;
     }
 
-    th, td {
+    th,
+    td {
       padding: 13px 14px;
       border-bottom: 1px solid #eaecf0;
       text-align: left;
@@ -432,7 +472,43 @@
       font-weight: 900;
     }
 
-    tr:last-child td { border-bottom: none; }
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    #tabTecnicos .table-wrap {
+      overflow-x: visible;
+    }
+
+    #tabTecnicos table {
+      min-width: 0;
+      table-layout: auto;
+    }
+
+    #tabTecnicos th,
+    #tabTecnicos td {
+      white-space: normal;
+    }
+
+    #tabTecnicos th:nth-child(1),
+    #tabTecnicos td:nth-child(1) {
+      width: 33%;
+    }
+
+    #tabTecnicos th:nth-child(2),
+    #tabTecnicos td:nth-child(2) {
+      width: 34%;
+    }
+
+    #tabTecnicos th:nth-child(3),
+    #tabTecnicos td:nth-child(3) {
+      width: 13%;
+    }
+
+    #tabTecnicos th:nth-child(4),
+    #tabTecnicos td:nth-child(4) {
+      width: 20%;
+    }
 
     .form-section {
       border: 1px solid #e4e7ec;
@@ -495,7 +571,9 @@
       justify-content: space-between;
     }
 
-    .mobile-top strong { font-size: 16px; }
+    .mobile-top strong {
+      font-size: 16px;
+    }
 
     .small {
       font-size: 12px;
@@ -509,14 +587,9 @@
 
     .row-actions {
       display: flex;
-      gap: 8px;
+      gap: 7px;
       flex-wrap: wrap;
-    }
-
-    .btn-mini {
-      padding: 8px 10px;
-      border-radius: 10px;
-      font-size: 12px;
+      align-items: center;
     }
 
     .wizard-box {
@@ -638,8 +711,17 @@
       color: #667085;
     }
 
-    .dot.done { background: #ecfdf3; color: #027a48; border-color: #abefc6; }
-    .dot.current { background: #eff8ff; color: #175cd3; border-color: #b2ddff; }
+    .dot.done {
+      background: #ecfdf3;
+      color: #027a48;
+      border-color: #abefc6;
+    }
+
+    .dot.current {
+      background: #eff8ff;
+      color: #175cd3;
+      border-color: #b2ddff;
+    }
 
     .modal-backdrop {
       position: fixed;
@@ -678,8 +760,8 @@
 
     .rule-card {
       border: 1px solid #e4e7ec;
-      border-radius: 16px;
-      padding: 14px;
+      border-radius: 14px;
+      padding: 12px;
       background: #fcfcfd;
       margin-bottom: 10px;
     }
@@ -687,12 +769,40 @@
     .rule-card strong {
       display: block;
       margin-bottom: 5px;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .rule-actions {
+      margin-top: 9px;
+    }
+
+    .mobile-card-list {
+      display: none;
+    }
+
+    .tecnico-mobile-card,
+    .apr-mobile-card {
+      border: 1px solid #e4e7ec;
+      background: #fff;
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+
+    .tecnico-mobile-card strong,
+    .apr-mobile-card strong {
+      color: var(--azul-escuro);
     }
 
     @media (max-width: 900px) {
-      .app { grid-template-columns: 1fr; }
+      .app {
+        grid-template-columns: 1fr;
+      }
 
-      .mobile-top { display: flex; }
+      .mobile-top {
+        display: flex;
+      }
 
       .sidebar {
         position: fixed;
@@ -704,9 +814,13 @@
         transition: 0.22s;
       }
 
-      .sidebar.open { left: 0; }
+      .sidebar.open {
+        left: 0;
+      }
 
-      .main { padding: 16px; }
+      .main {
+        padding: 16px;
+      }
 
       .topbar {
         align-items: flex-start;
@@ -722,6 +836,43 @@
 
       .wizard-question {
         font-size: 19px;
+      }
+
+      .card {
+        padding: 16px;
+      }
+
+      .btn {
+        width: auto;
+      }
+
+      .btn-full-mobile {
+        width: 100%;
+      }
+
+      #tabTecnicos .table-wrap {
+        display: none;
+      }
+
+      #tecnicosMobileList {
+        display: block;
+      }
+
+      #tabHistorico .table-wrap {
+        overflow-x: auto;
+      }
+
+      .rule-card {
+        padding: 11px;
+      }
+
+      .rule-card .row-actions {
+        gap: 6px;
+      }
+
+      .btn-regra {
+        padding: 6px 8px;
+        font-size: 11px;
       }
     }
   </style>
@@ -903,7 +1054,6 @@
             <div class="form-section">
               <h4>Questionário da APR</h4>
               <p class="small">Responda uma pergunta por vez. Use Sim, Não ou Não se aplica conforme a atividade.</p>
-
               <div id="wizardContainer"></div>
             </div>
 
@@ -912,7 +1062,7 @@
               <textarea id="aprObservacoes" placeholder="Informe observações, pendências ou detalhes da análise de risco"></textarea>
             </div>
 
-            <button id="btnSalvarApr" class="btn btn-primary" onclick="salvarApr()">Salvar APR</button>
+            <button id="btnSalvarApr" class="btn btn-primary btn-full-mobile" onclick="salvarApr()">Salvar APR</button>
             <div id="novaAprMsg" class="msg"></div>
           </div>
         </section>
@@ -951,7 +1101,7 @@
                 </select>
               </div>
 
-              <button class="btn btn-primary" onclick="carregarAprs()">Filtrar</button>
+              <button class="btn btn-primary btn-full-mobile" onclick="carregarAprs()">Filtrar</button>
             </div>
 
             <div class="table-wrap">
@@ -1038,6 +1188,8 @@
                   </tbody>
                 </table>
               </div>
+
+              <div id="tecnicosMobileList" class="mobile-card-list"></div>
             </div>
           </div>
         </section>
@@ -1148,6 +1300,7 @@
   <script>
     const SUPABASE_URL = "https://xepcbnwcuehfxdlqnonp.supabase.co";
     const SUPABASE_KEY = "sb_publishable_jo9nWMtk0y0pg3HqaDbXVQ_oCrCaW3Z";
+
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let usuarioAtual = null;
@@ -1362,6 +1515,7 @@
           alert("Somente admin pode acessar as regras.");
           return;
         }
+
         document.getElementById("tabRegras").classList.remove("hidden");
         document.getElementById("navRegras").classList.add("active");
         renderRegras();
@@ -1389,10 +1543,13 @@
 
     function renderTabelaTecnicos() {
       const tbody = document.getElementById("tbodyTecnicos");
+      const mobileList = document.getElementById("tecnicosMobileList");
+
       if (!tbody) return;
 
       if (!tecnicosCache.length) {
         tbody.innerHTML = `<tr><td colspan="4">Nenhum técnico cadastrado.</td></tr>`;
+        if (mobileList) mobileList.innerHTML = `<div class="tecnico-mobile-card">Nenhum técnico cadastrado.</div>`;
         return;
       }
 
@@ -1408,6 +1565,21 @@
           </td>
         </tr>
       `).join("");
+
+      if (mobileList) {
+        mobileList.innerHTML = tecnicosCache.map(t => `
+          <div class="tecnico-mobile-card">
+            <strong>${escapeHtml(t.nome)}</strong>
+            <div class="small" style="margin-top:4px;">${escapeHtml(t.cargo || "-")}</div>
+            <div style="margin-top:8px;">
+              ${t.ativo ? '<span class="badge finalizada">Ativo</span>' : '<span class="badge inativo">Inativo</span>'}
+            </div>
+            <div class="row-actions" style="margin-top:10px;">
+              <button class="btn btn-light btn-mini" onclick="editarTecnico('${t.id}')">Editar</button>
+            </div>
+          </div>
+        `).join("");
+      }
     }
 
     function editarTecnico(id) {
@@ -1430,6 +1602,8 @@
       document.getElementById("btnCancelarTecnico").classList.remove("hidden");
 
       clearMsg("tecMsg");
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     function limparFormTecnico() {
@@ -1471,11 +1645,13 @@
           .from("tecnicos")
           .update({ nome, cargo, telefone, ativo })
           .eq("id", id);
+
         error = res.error;
       } else {
         const res = await supabaseClient
           .from("tecnicos")
           .insert({ nome, cargo, telefone, ativo });
+
         error = res.error;
       }
 
@@ -1608,9 +1784,9 @@
 
     function responderChecklist(id, resposta) {
       checklistAnswers[id] = resposta;
+
       const perguntas = perguntasAtivas();
       const idx = perguntas.findIndex(p => p.id === id);
-      const p = perguntas[idx];
 
       if (resposta !== "N") {
         delete checklistAnswers[id + "_obs"];
@@ -1679,9 +1855,12 @@
       document.getElementById("aprTipoServicoOutros").value = "";
       document.getElementById("aprDescricao").value = "";
       document.getElementById("aprObservacoes").value = "";
+
       document.querySelectorAll(".tecAprCheck").forEach(c => c.checked = false);
+
       checklistAnswers = {};
       checklistIndex = 0;
+
       toggleOutroServico();
       renderWizard();
       clearMsg("novaAprMsg");
@@ -1758,21 +1937,21 @@
 
       const tecnicoResponsavel = tecnicosSelecionados[0];
 
-   const payloadApr = {
-  numero_os,
-  protocolo_os,
-  codigo_cliente,
-  cliente_nome,
-  cliente_endereco,
-  cidade_bairro,
-  tipo_servico,
-  tipo_servico_outros,
-  descricao_atividade,
-  observacoes_adicionais,
-  status: "aguardando_assinaturas",
-  tecnico_responsavel_id: tecnicoResponsavel.id,
-  atualizado_em: new Date().toISOString()
-};
+      const payloadApr = {
+        numero_os,
+        protocolo_os,
+        codigo_cliente,
+        cliente_nome,
+        cliente_endereco,
+        cidade_bairro,
+        tipo_servico,
+        tipo_servico_outros,
+        descricao_atividade,
+        observacoes_adicionais,
+        status: "aguardando_assinaturas",
+        tecnico_responsavel_id: tecnicoResponsavel.id,
+        atualizado_em: new Date().toISOString()
+      };
 
       let aprId = aprEditandoId;
       let aprNumero = "";
@@ -1874,6 +2053,7 @@
       });
 
       setMsg("novaAprMsg", "ok", `APR ${aprNumero || ""} salva com sucesso.`);
+
       aprEditandoId = null;
       document.getElementById("tituloNovaApr").textContent = "Nova APR";
       document.getElementById("btnSalvarApr").textContent = "Salvar APR";
@@ -2001,8 +2181,8 @@
       document.getElementById("aprTipoServicoOutros").value = apr.tipo_servico_outros || "";
       document.getElementById("aprDescricao").value = apr.descricao_atividade || "";
       document.getElementById("aprObservacoes").value = apr.observacoes_adicionais || "";
-      toggleOutroServico();
 
+      toggleOutroServico();
       renderTecnicosNovaApr();
 
       setTimeout(() => {
@@ -2026,6 +2206,7 @@
 
       showTab("novaApr");
       renderWizard();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     async function verDetalhesApr(id) {
@@ -2092,18 +2273,21 @@
           ${grupos[grupo].map(r => `
             <div class="rule-card">
               <strong>${r.ordem}. ${escapeHtml(r.pergunta)}</strong>
+
               <div class="small">
                 Status: ${r.ativo ? "Ativa" : "Inativa"} •
                 N/A: ${r.aceita_na ? "Sim" : "Não"} •
                 Criticidade: ${escapeHtml(r.criticidade || "normal")}
               </div>
+
               <div class="small">
                 Exige obs. se NÃO: ${r.exige_observacao_se_nao ? "Sim" : "Não"} •
                 Bloqueia se NÃO: ${r.bloqueia_finalizacao_se_nao ? "Sim" : "Não"}
               </div>
-              <div class="row-actions" style="margin-top:10px;">
-                <button class="btn btn-light btn-mini" onclick="editarRegra('${r.id}')">Editar</button>
-                <button class="btn btn-warning btn-mini" onclick="alternarRegraAtiva('${r.id}', ${r.ativo ? "false" : "true"})">${r.ativo ? "Inativar" : "Ativar"}</button>
+
+              <div class="row-actions rule-actions">
+                <button class="btn btn-light btn-regra" onclick="editarRegra('${r.id}')">Editar</button>
+                <button class="btn btn-warning btn-regra" onclick="alternarRegraAtiva('${r.id}', ${r.ativo ? "false" : "true"})">${r.ativo ? "Inativar" : "Ativar"}</button>
               </div>
             </div>
           `).join("")}
@@ -2128,7 +2312,9 @@
       document.getElementById("tituloFormRegra").textContent = "Editando regra/pergunta";
       document.getElementById("btnSalvarRegra").textContent = "Salvar alterações";
       document.getElementById("btnCancelarRegra").classList.remove("hidden");
+
       clearMsg("regraMsg");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     function limparFormRegra() {
@@ -2145,6 +2331,7 @@
       document.getElementById("tituloFormRegra").textContent = "Nova regra/pergunta";
       document.getElementById("btnSalvarRegra").textContent = "Salvar regra";
       document.getElementById("btnCancelarRegra").classList.add("hidden");
+
       clearMsg("regraMsg");
     }
 
@@ -2184,11 +2371,13 @@
           .from("apr_checklist_modelo")
           .update(payload)
           .eq("id", id);
+
         error = res.error;
       } else {
         const res = await supabaseClient
           .from("apr_checklist_modelo")
           .insert(payload);
+
         error = res.error;
       }
 
