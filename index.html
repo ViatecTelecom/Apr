@@ -1018,6 +1018,17 @@
       margin: 0;
     }
 
+
+    .tecnico-section h4 {
+      margin: 0 0 6px;
+      color: var(--azul-escuro);
+      font-size: 16px;
+    }
+
+    .tecnico-section .table-wrap {
+      margin-top: 10px;
+    }
+
     @media (max-width: 900px) {
       .app {
         grid-template-columns: 1fr;
@@ -1077,7 +1088,8 @@
         display: none;
       }
 
-      #tecnicosMobileList {
+      #tecnicosAtivosMobileList,
+      #tecnicosInativosMobileList {
         display: block;
       }
 
@@ -1458,28 +1470,63 @@
             <div class="card">
               <h3>Técnicos cadastrados</h3>
 
-              <div class="field">
-                <label>Pesquisar técnico cadastrado</label>
-                <input id="filtroTecnicoCadastro" placeholder="Digite nome, cargo ou telefone..." oninput="renderTabelaTecnicos()">
+              <div class="grid grid-2">
+                <div class="field">
+                  <label>Pesquisar técnico cadastrado</label>
+                  <input id="filtroTecnicoCadastro" placeholder="Digite nome, cargo ou telefone..." oninput="renderTabelaTecnicos()">
+                </div>
+
+                <div class="field">
+                  <label>Mostrar</label>
+                  <select id="filtroStatusTecnico" onchange="renderTabelaTecnicos()">
+                    <option value="ativos">Somente ativos</option>
+                    <option value="inativos">Somente inativos</option>
+                    <option value="todos">Ativos e inativos</option>
+                  </select>
+                </div>
               </div>
 
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Nome</th>
-                      <th>Cargo</th>
-                      <th>Status</th>
-                      <th>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tbodyTecnicos">
-                    <tr><td colspan="4">Carregando...</td></tr>
-                  </tbody>
-                </table>
+              <div id="secTecnicosAtivos" class="tecnico-section">
+                <h4>Técnicos ativos</h4>
+                <p class="small">Aparecem na criação da APR e podem ser selecionados para assinatura.</p>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Nome</th>
+                        <th>Cargo</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbodyTecnicosAtivos">
+                      <tr><td colspan="4">Carregando...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div id="tecnicosAtivosMobileList" class="mobile-card-list"></div>
               </div>
 
-              <div id="tecnicosMobileList" class="mobile-card-list"></div>
+              <div id="secTecnicosInativos" class="tecnico-section hidden" style="margin-top:18px;">
+                <h4>Técnicos inativos</h4>
+                <p class="small">Não aparecem na criação da APR, mas permanecem no histórico caso já tenham sido usados.</p>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Nome</th>
+                        <th>Cargo</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbodyTecnicosInativos">
+                      <tr><td colspan="4">Carregando...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div id="tecnicosInativosMobileList" class="mobile-card-list"></div>
+              </div>
             </div>
           </div>
         </section>
@@ -1944,34 +1991,47 @@
     }
 
     function renderTabelaTecnicos() {
-      const tbody = document.getElementById("tbodyTecnicos");
-      const mobileList = document.getElementById("tecnicosMobileList");
+      const tbodyAtivos = document.getElementById("tbodyTecnicosAtivos");
+      const tbodyInativos = document.getElementById("tbodyTecnicosInativos");
+      const mobileAtivos = document.getElementById("tecnicosAtivosMobileList");
+      const mobileInativos = document.getElementById("tecnicosInativosMobileList");
+      const secAtivos = document.getElementById("secTecnicosAtivos");
+      const secInativos = document.getElementById("secTecnicosInativos");
+      const filtroStatus = document.getElementById("filtroStatusTecnico")?.value || "ativos";
 
-      if (!tbody) return;
+      if (!tbodyAtivos || !tbodyInativos) return;
 
       const lista = getTecnicosFiltradosCadastro();
+      const ativos = lista.filter(t => !!t.ativo);
+      const inativos = lista.filter(t => !t.ativo);
 
-      if (!lista.length) {
-        tbody.innerHTML = `<tr><td colspan="4">Nenhum técnico encontrado.</td></tr>`;
-        if (mobileList) mobileList.innerHTML = `<div class="tecnico-mobile-card">Nenhum técnico encontrado.</div>`;
-        return;
-      }
+      secAtivos.classList.toggle("hidden", filtroStatus === "inativos");
+      secInativos.classList.toggle("hidden", filtroStatus === "ativos");
 
-      tbody.innerHTML = lista.map(t => `
-        <tr>
-          <td><strong>${escapeHtml(t.nome)}</strong></td>
-          <td>${escapeHtml(t.cargo || "-")}</td>
-          <td>${t.ativo ? '<span class="badge finalizada">Ativo</span>' : '<span class="badge inativo">Inativo</span>'}</td>
-          <td>
-            <div class="row-actions">
-              <button class="btn btn-light btn-mini" onclick="editarTecnico('${t.id}')">Editar</button>
-            </div>
-          </td>
-        </tr>
-      `).join("");
+      const renderRows = (arr, ativo) => {
+        if (!arr.length) {
+          return `<tr><td colspan="4">Nenhum técnico ${ativo ? "ativo" : "inativo"} encontrado.</td></tr>`;
+        }
 
-      if (mobileList) {
-        mobileList.innerHTML = lista.map(t => `
+        return arr.map(t => `
+          <tr>
+            <td><strong>${escapeHtml(t.nome)}</strong></td>
+            <td>${escapeHtml(t.cargo || "-")}</td>
+            <td>${t.ativo ? '<span class="badge finalizada">Ativo</span>' : '<span class="badge inativo">Inativo</span>'}</td>
+            <td>
+              <div class="row-actions">
+                <button class="btn btn-light btn-mini" onclick="editarTecnico('${t.id}')">Editar</button>
+                <button class="btn ${t.ativo ? 'btn-warning' : 'btn-green'} btn-mini" onclick="alterarStatusTecnico('${t.id}', ${t.ativo ? 'false' : 'true'})">${t.ativo ? 'Inativar' : 'Ativar'}</button>
+              </div>
+            </td>
+          </tr>
+        `).join("");
+      };
+
+      const renderMobile = (arr, ativo) => {
+        if (!arr.length) return `<div class="tecnico-mobile-card">Nenhum técnico ${ativo ? "ativo" : "inativo"} encontrado.</div>`;
+
+        return arr.map(t => `
           <div class="tecnico-mobile-card">
             <strong>${escapeHtml(t.nome)}</strong>
             <div class="small" style="margin-top:4px;">${escapeHtml(t.cargo || "-")}</div>
@@ -1981,10 +2041,43 @@
             </div>
             <div class="row-actions" style="margin-top:10px;">
               <button class="btn btn-light btn-mini" onclick="editarTecnico('${t.id}')">Editar</button>
+              <button class="btn ${t.ativo ? 'btn-warning' : 'btn-green'} btn-mini" onclick="alterarStatusTecnico('${t.id}', ${t.ativo ? 'false' : 'true'})">${t.ativo ? 'Inativar' : 'Ativar'}</button>
             </div>
           </div>
         `).join("");
+      };
+
+      tbodyAtivos.innerHTML = renderRows(ativos, true);
+      tbodyInativos.innerHTML = renderRows(inativos, false);
+
+      if (mobileAtivos) mobileAtivos.innerHTML = renderMobile(ativos, true);
+      if (mobileInativos) mobileInativos.innerHTML = renderMobile(inativos, false);
+    }
+
+    async function alterarStatusTecnico(id, ativo) {
+      if (perfilAtual?.perfil !== "admin") {
+        alert("Somente admin pode alterar técnicos.");
+        return;
       }
+
+      const tecnico = tecnicosCache.find(t => t.id === id);
+      if (!tecnico) return;
+
+      const acao = ativo ? "ativar" : "inativar";
+      if (!confirm(`Deseja ${acao} o técnico ${tecnico.nome}?`)) return;
+
+      const { error } = await supabaseClient
+        .from("tecnicos")
+        .update({ ativo })
+        .eq("id", id);
+
+      if (error) {
+        alert("Erro ao alterar status do técnico: " + error.message);
+        return;
+      }
+
+      await carregarTecnicos();
+      setMsg("tecMsg", "ok", ativo ? "Técnico ativado com sucesso." : "Técnico inativado com sucesso.");
     }
 
     function editarTecnico(id) {
@@ -2943,6 +3036,7 @@
             <td>
               <div class="row-actions">
                 <button class="btn btn-light btn-mini" onclick="verDetalhesApr('${apr.id}')">Ver</button>
+                ${perfilAtual?.perfil === 'admin' ? `<button class="btn btn-green btn-mini" onclick="baixarAprPdf('${apr.id}')">Baixar APR</button>` : ''}
                 ${perfilAtual?.perfil === 'admin'
                   ? (podeEditar ? `<button class="btn btn-primary btn-mini" onclick="editarApr('${apr.id}')">Editar</button>` : `<button class="btn btn-light btn-mini" disabled>Bloqueada</button>`)
                   : `<button class="btn btn-primary btn-mini" onclick="abrirAssinaturaPorApr('${apr.id}')">Assinar</button>`}
@@ -3072,7 +3166,10 @@
           <p><strong>Cliente:</strong> ${escapeHtml(apr.cliente_nome || "-")}</p>
           <p><strong>Cidade/Bairro:</strong> ${escapeHtml(apr.cidade_bairro || "-")}</p>
           <p><strong>Status:</strong> ${labelStatus(apr.status)}</p>
-          ${possoAssinar ? `<button class="btn btn-primary" onclick="abrirModalAssinatura('${apr.id}')">Assinar esta APR</button>` : ""}
+          <div class="row-actions">
+            ${perfilAtual?.perfil === "admin" ? `<button class="btn btn-green" onclick="baixarAprPdf('${apr.id}')">Baixar APR</button>` : ""}
+            ${possoAssinar ? `<button class="btn btn-primary" onclick="abrirModalAssinatura('${apr.id}')">Assinar esta APR</button>` : ""}
+          </div>
         </div>
 
         <div class="form-section">
@@ -3127,6 +3224,172 @@
 
     function fecharModalApr() {
       document.getElementById("modalDetalhesApr").classList.add("hidden");
+    }
+
+    async function baixarAprPdf(aprId) {
+      if (perfilAtual?.perfil !== "admin") {
+        alert("Somente admin pode baixar APR.");
+        return;
+      }
+
+      const { data: apr, error: aprError } = await supabaseClient.from("aprs").select("*").eq("id", aprId).single();
+      if (aprError || !apr) {
+        alert("Erro ao carregar APR para download.");
+        return;
+      }
+
+      const { data: tecs } = await supabaseClient.from("apr_tecnicos").select("*").eq("apr_id", aprId).order("nome_tecnico");
+      const { data: respostas } = await supabaseClient.from("apr_checklist_respostas").select("*").eq("apr_id", aprId).order("ordem");
+      const { data: fotos } = await supabaseClient.from("apr_fotos").select("*").eq("apr_id", aprId).order("enviada_em", { ascending: true });
+
+      const fotosComUrl = [];
+      for (const foto of (fotos || [])) {
+        const { data: signed } = await supabaseClient
+          .storage
+          .from("apr-arquivos")
+          .createSignedUrl(foto.storage_path, 60 * 60);
+
+        fotosComUrl.push({ ...foto, signed_url: signed?.signedUrl || "" });
+      }
+
+      const tecsComAssinatura = [];
+      for (const t of (tecs || [])) {
+        let assinatura_url = "";
+        if (t.assinatura_storage_path) {
+          const { data: signedAss } = await supabaseClient
+            .storage
+            .from("apr-arquivos")
+            .createSignedUrl(t.assinatura_storage_path, 60 * 60);
+          assinatura_url = signedAss?.signedUrl || "";
+        }
+        tecsComAssinatura.push({ ...t, assinatura_url });
+      }
+
+      const nomeArquivo = `APR-${apr.numero_apr || apr.numero_os || apr.id}`.replaceAll("/", "-").replaceAll(" ", "-");
+
+      const html = `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8">
+          <title>${escapeHtml(nomeArquivo)}</title>
+          <style>
+            body { font-family: Arial, Helvetica, sans-serif; color: #1d2939; margin: 24px; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0057a8; padding-bottom: 12px; margin-bottom: 18px; }
+            .brand { font-size: 24px; font-weight: 900; color: #0057a8; }
+            h1 { font-size: 22px; margin: 0 0 6px; color: #003b73; }
+            h2 { font-size: 16px; color: #003b73; border-bottom: 1px solid #d0d5dd; padding-bottom: 5px; margin-top: 22px; }
+            p { margin: 5px 0; font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
+            th, td { border: 1px solid #d0d5dd; padding: 6px; text-align: left; vertical-align: top; }
+            th { background: #f2f4f7; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+            .box { border: 1px solid #d0d5dd; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+            .badge { display: inline-block; border-radius: 999px; padding: 3px 7px; font-weight: 700; font-size: 10px; border: 1px solid #d0d5dd; }
+            .ok { background: #ecfdf3; color: #027a48; border-color: #abefc6; }
+            .pend { background: #eff8ff; color: #175cd3; border-color: #b2ddff; }
+            .foto-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .foto { border: 1px solid #d0d5dd; border-radius: 8px; padding: 6px; page-break-inside: avoid; }
+            .foto img { width: 100%; max-height: 230px; object-fit: contain; }
+            .assinatura-img { max-width: 220px; max-height: 90px; border: 1px solid #d0d5dd; margin-top: 6px; }
+            @media print { body { margin: 12mm; } button { display: none; } .page-break { page-break-before: always; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="brand">VIATEC</div>
+              <h1>APR Digital - Análise Preliminar de Risco</h1>
+              <p>Documento gerado em ${formatarData(new Date().toISOString())}</p>
+            </div>
+            <div>
+              <p><strong>APR:</strong> ${escapeHtml(apr.numero_apr || "-")}</p>
+              <p><strong>Status:</strong> ${escapeHtml(labelStatus(apr.status))}</p>
+            </div>
+          </div>
+
+          <h2>Dados da OS / Cliente</h2>
+          <div class="grid">
+            <div class="box">
+              <p><strong>OS:</strong> ${escapeHtml(apr.numero_os || "-")}</p>
+              <p><strong>Protocolo:</strong> ${escapeHtml(apr.protocolo_os || "-")}</p>
+              <p><strong>Código do cliente:</strong> ${escapeHtml(apr.codigo_cliente || "-")}</p>
+              <p><strong>Cliente:</strong> ${escapeHtml(apr.cliente_nome || "-")}</p>
+            </div>
+            <div class="box">
+              <p><strong>Cidade/Bairro:</strong> ${escapeHtml(apr.cidade_bairro || "-")}</p>
+              <p><strong>Endereço:</strong> ${escapeHtml(apr.cliente_endereco || "-")}</p>
+              <p><strong>Serviço:</strong> ${escapeHtml(formatarTipoServico(apr.tipo_servico, apr.tipo_servico_outros))}</p>
+              <p><strong>Emitida em:</strong> ${formatarData(apr.emitida_em || apr.criada_em)}</p>
+            </div>
+          </div>
+
+          <h2>Descrição da atividade</h2>
+          <div class="box"><p>${escapeHtml(apr.descricao_atividade || "-")}</p></div>
+
+          <h2>Técnicos e assinaturas</h2>
+          <table>
+            <thead><tr><th>Técnico</th><th>Cargo</th><th>Status</th><th>Assinatura</th></tr></thead>
+            <tbody>
+              ${tecsComAssinatura.map(t => `
+                <tr>
+                  <td>${escapeHtml(t.nome_tecnico || "-")} ${t.responsavel ? "(Responsável)" : ""}</td>
+                  <td>${escapeHtml(t.cargo || "-")}</td>
+                  <td>${t.assinado ? `<span class="badge ok">Assinado</span><br>${formatarData(t.assinado_em)}` : `<span class="badge pend">Pendente</span>`}</td>
+                  <td>${t.assinatura_url ? `<img class="assinatura-img" src="${t.assinatura_url}">` : "-"}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+
+          <h2>Checklist</h2>
+          <table>
+            <thead><tr><th>#</th><th>Grupo</th><th>Pergunta</th><th>Resposta</th><th>Observação</th></tr></thead>
+            <tbody>
+              ${(respostas || []).map(r => `
+                <tr>
+                  <td>${escapeHtml(r.ordem || "")}</td>
+                  <td>${escapeHtml(r.grupo || "-")}</td>
+                  <td>${escapeHtml(r.pergunta || "-")}</td>
+                  <td><strong>${escapeHtml(r.resposta || "-")}</strong></td>
+                  <td>${escapeHtml(r.observacao || "-")}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+
+          <h2>Observações adicionais</h2>
+          <div class="box"><p>${escapeHtml(apr.observacoes_adicionais || "-")}</p></div>
+
+          <div class="page-break"></div>
+          <h2>Fotos de comprovação</h2>
+          ${fotosComUrl.length ? `
+            <div class="foto-grid">
+              ${fotosComUrl.map(f => `
+                <div class="foto">
+                  <img src="${f.signed_url}">
+                  <p><strong>${escapeHtml(f.arquivo_nome || "Foto")}</strong></p>
+                  <p>Enviada em: ${formatarData(f.enviada_em)}</p>
+                </div>
+              `).join("")}
+            </div>
+          ` : `<p>Nenhuma foto vinculada.</p>`}
+        </body>
+        </html>
+      `;
+
+      const janela = window.open("", "_blank");
+      if (!janela) {
+        alert("Permita pop-ups para baixar/imprimir a APR.");
+        return;
+      }
+      janela.document.open();
+      janela.document.write(html);
+      janela.document.close();
+      setTimeout(() => {
+        janela.focus();
+        janela.print();
+      }, 900);
     }
 
 
