@@ -892,6 +892,75 @@
       margin-top: 10px;
     }
 
+
+
+    .assinatura-status-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .assinatura-status-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid #e4e7ec;
+      background: #fff;
+      border-radius: 14px;
+      padding: 12px;
+      flex-wrap: wrap;
+    }
+
+    .assinatura-img {
+      max-width: 240px;
+      max-height: 90px;
+      object-fit: contain;
+      border: 1px solid #e4e7ec;
+      border-radius: 10px;
+      background: white;
+      margin-top: 8px;
+    }
+
+    .signature-canvas-wrap {
+      border: 2px dashed #b8c4d6;
+      border-radius: 18px;
+      background: #fff;
+      padding: 10px;
+      touch-action: none;
+    }
+
+    #signatureCanvas {
+      width: 100%;
+      height: 220px;
+      display: block;
+      background: white;
+      border-radius: 12px;
+      touch-action: none;
+    }
+
+    .declaracao-box {
+      background: #f8fafc;
+      border: 1px solid #e4e7ec;
+      border-radius: 14px;
+      padding: 12px;
+      margin: 12px 0;
+      line-height: 1.45;
+    }
+
+    .assinatura-card {
+      border: 1px solid #e4e7ec;
+      background: #fff;
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .assinatura-card h4 {
+      margin: 0 0 8px;
+      color: var(--azul-escuro);
+    }
+
     @media (max-width: 900px) {
       .app {
         grid-template-columns: 1fr;
@@ -1026,6 +1095,7 @@
           <button id="navDashboard" class="active" onclick="showTab('dashboard')">Dashboard</button>
           <button id="navNovaApr" onclick="showTab('novaApr')">Nova APR</button>
           <button id="navHistorico" onclick="showTab('historico')">Histórico de APRs</button>
+          <button id="navMinhasAssinaturas" onclick="showTab('minhasAssinaturas')">Minhas assinaturas</button>
           <button id="navTecnicos" onclick="showTab('tecnicos')">Técnicos</button>
           <button id="navRegras" onclick="showTab('regras')">Regras da APR</button>
           <button onclick="logout()">Sair</button>
@@ -1253,6 +1323,23 @@
           </div>
         </section>
 
+
+
+        <section id="tabMinhasAssinaturas" class="hidden">
+          <div class="topbar">
+            <div>
+              <h2>Minhas assinaturas</h2>
+              <p>APRs em que você foi selecionado e precisa assinar.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div id="listaMinhasAssinaturas">
+              <p>Carregando...</p>
+            </div>
+          </div>
+        </section>
+
         <section id="tabTecnicos" class="hidden">
           <div class="topbar">
             <div>
@@ -1430,6 +1517,43 @@
     </div>
   </div>
 
+
+
+  <div id="modalAssinaturaApr" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Assinatura digital da APR</h3>
+        <button class="btn btn-light btn-mini" onclick="fecharModalAssinatura()">Fechar</button>
+      </div>
+
+      <div id="assinaturaAprInfo" class="form-section"></div>
+
+      <div class="declaracao-box">
+        <label style="display:flex;align-items:flex-start;gap:10px;margin:0;">
+          <input id="checkDeclaracaoAssinatura" type="checkbox" style="width:auto;margin-top:3px;">
+          <span>
+            Declaro que li e estou ciente da APR, dos riscos da atividade e das medidas de segurança informadas antes do início do serviço.
+          </span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label>Assine abaixo com o dedo ou mouse</label>
+        <div class="signature-canvas-wrap">
+          <canvas id="signatureCanvas"></canvas>
+        </div>
+      </div>
+
+      <div class="row-actions">
+        <button class="btn btn-light" onclick="limparAssinaturaCanvas()">Limpar assinatura</button>
+        <button class="btn btn-primary" onclick="confirmarAssinaturaApr()">Confirmar assinatura</button>
+      </div>
+
+      <div id="assinaturaMsg" class="msg"></div>
+    </div>
+  </div>
+
+
   <script>
     const SUPABASE_URL = "https://xepcbnwcuehfxdlqnonp.supabase.co";
     const SUPABASE_KEY = "sb_publishable_jo9nWMtk0y0pg3HqaDbXVQ_oCrCaW3Z";
@@ -1448,6 +1572,8 @@
     let tecnicosSelecionadosApr = new Set();
     let fotosPendentesApr = [];
     let fotosExistentesApr = [];
+    let assinaturaAprAtual = null;
+    let signatureState = { drawing: false, signed: false, canvasReady: false };
 
     document.addEventListener("DOMContentLoaded", async () => {
       await verificarSessao();
@@ -1578,10 +1704,14 @@
 
       document.getElementById("userNome").textContent = perfilAtual?.nome || "Usuário";
       document.getElementById("userPerfil").textContent = perfilAtual?.perfil === "admin" ? "Administrador" : "Técnico";
-      document.getElementById("navRegras").style.display = perfilAtual?.perfil === "admin" ? "block" : "none";
+      const isAdmin = perfilAtual?.perfil === "admin";
+      document.getElementById("navNovaApr").style.display = isAdmin ? "block" : "none";
+      document.getElementById("navTecnicos").style.display = isAdmin ? "block" : "none";
+      document.getElementById("navRegras").style.display = isAdmin ? "block" : "none";
+      document.getElementById("navMinhasAssinaturas").style.display = isAdmin ? "none" : "block";
 
       await carregarDadosIniciais();
-      showTab("dashboard");
+      showTab(isAdmin ? "dashboard" : "minhasAssinaturas");
     }
 
     async function carregarDadosIniciais() {
@@ -1616,7 +1746,7 @@
     }
 
     function showTab(tab) {
-      const tabs = ["Dashboard", "NovaApr", "Historico", "Tecnicos", "Regras"];
+      const tabs = ["Dashboard", "NovaApr", "Historico", "Tecnicos", "Regras", "MinhasAssinaturas"];
       tabs.forEach(t => document.getElementById("tab" + t).classList.add("hidden"));
       document.querySelectorAll(".nav button").forEach(btn => btn.classList.remove("active"));
 
@@ -1627,6 +1757,7 @@
       }
 
       if (tab === "novaApr") {
+        if (perfilAtual?.perfil !== "admin") { alert("Somente admin pode criar APR."); return; }
         document.getElementById("tabNovaApr").classList.remove("hidden");
         document.getElementById("navNovaApr").classList.add("active");
         renderTecnicosNovaApr();
@@ -1641,9 +1772,18 @@
       }
 
       if (tab === "tecnicos") {
+        if (perfilAtual?.perfil !== "admin") { alert("Somente admin pode acessar técnicos."); return; }
         document.getElementById("tabTecnicos").classList.remove("hidden");
         document.getElementById("navTecnicos").classList.add("active");
         carregarTecnicos();
+      }
+
+
+
+      if (tab === "minhasAssinaturas") {
+        document.getElementById("tabMinhasAssinaturas").classList.remove("hidden");
+        document.getElementById("navMinhasAssinaturas").classList.add("active");
+        carregarMinhasAssinaturas();
       }
 
       if (tab === "regras") {
@@ -2560,23 +2700,61 @@
       const filtroCliente = document.getElementById("filtroCliente")?.value.trim();
       const filtroStatus = document.getElementById("filtroStatus")?.value;
 
-      let query = supabaseClient
-        .from("aprs")
-        .select("*")
-        .order("criada_em", { ascending: false })
-        .limit(100);
+      let lista = [];
 
-      if (filtroStatus) query = query.eq("status", filtroStatus);
-      if (filtroCliente) query = query.ilike("cliente_nome", `%${filtroCliente}%`);
+      if (perfilAtual?.perfil === "admin") {
+        let query = supabaseClient
+          .from("aprs")
+          .select("*")
+          .order("criada_em", { ascending: false })
+          .limit(100);
 
-      const { data, error } = await query;
+        if (filtroStatus) query = query.eq("status", filtroStatus);
+        if (filtroCliente) query = query.ilike("cliente_nome", `%${filtroCliente}%`);
 
-      if (error) {
-        if (tbody) tbody.innerHTML = `<tr><td colspan="7">Erro ao carregar APRs: ${escapeHtml(error.message)}</td></tr>`;
-        return;
+        const { data, error } = await query;
+
+        if (error) {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="7">Erro ao carregar APRs: ${escapeHtml(error.message)}</td></tr>`;
+          return;
+        }
+
+        lista = data || [];
+      } else {
+        const { data: vinculos, error: vincError } = await supabaseClient
+          .from("apr_tecnicos")
+          .select("apr_id, assinado")
+          .eq("usuario_id", usuarioAtual.id);
+
+        if (vincError) {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="7">Erro ao carregar suas APRs: ${escapeHtml(vincError.message)}</td></tr>`;
+          return;
+        }
+
+        const aprIds = [...new Set((vinculos || []).map(v => v.apr_id).filter(Boolean))];
+        if (!aprIds.length) {
+          renderAprs([]);
+          return;
+        }
+
+        let query = supabaseClient
+          .from("aprs")
+          .select("*")
+          .in("id", aprIds)
+          .order("criada_em", { ascending: false });
+
+        if (filtroStatus) query = query.eq("status", filtroStatus);
+        if (filtroCliente) query = query.ilike("cliente_nome", `%${filtroCliente}%`);
+
+        const { data, error } = await query;
+        if (error) {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="7">Erro ao carregar APRs: ${escapeHtml(error.message)}</td></tr>`;
+          return;
+        }
+
+        lista = data || [];
       }
 
-      let lista = data || [];
       aprsCache = lista;
 
       if (filtroOs) {
@@ -2620,7 +2798,9 @@
             <td>
               <div class="row-actions">
                 <button class="btn btn-light btn-mini" onclick="verDetalhesApr('${apr.id}')">Ver</button>
-                ${podeEditar ? `<button class="btn btn-primary btn-mini" onclick="editarApr('${apr.id}')">Editar</button>` : `<button class="btn btn-light btn-mini" disabled>Bloqueada</button>`}
+                ${perfilAtual?.perfil === 'admin'
+                  ? (podeEditar ? `<button class="btn btn-primary btn-mini" onclick="editarApr('${apr.id}')">Editar</button>` : `<button class="btn btn-light btn-mini" disabled>Bloqueada</button>`)
+                  : `<button class="btn btn-primary btn-mini" onclick="abrirAssinaturaPorApr('${apr.id}')">Assinar</button>`}
               </div>
             </td>
           </tr>
@@ -2720,6 +2900,25 @@
         });
       }
 
+      const tecsComAssinatura = [];
+      for (const t of (tecs || [])) {
+        let assinatura_url = "";
+
+        if (t.assinatura_storage_path) {
+          const { data: signedAss } = await supabaseClient
+            .storage
+            .from("apr-arquivos")
+            .createSignedUrl(t.assinatura_storage_path, 60 * 60);
+
+          assinatura_url = signedAss?.signedUrl || "";
+        }
+
+        tecsComAssinatura.push({ ...t, assinatura_url });
+      }
+
+      const meuVinculo = tecsComAssinatura.find(t => t.usuario_id === usuarioAtual.id);
+      const possoAssinar = perfilAtual?.perfil !== "admin" && meuVinculo && !meuVinculo.assinado;
+
       document.getElementById("conteudoDetalhesApr").innerHTML = `
         <div class="form-section">
           <h4>${escapeHtml(apr.numero_apr || "APR")}</h4>
@@ -2728,13 +2927,24 @@
           <p><strong>Cliente:</strong> ${escapeHtml(apr.cliente_nome || "-")}</p>
           <p><strong>Cidade/Bairro:</strong> ${escapeHtml(apr.cidade_bairro || "-")}</p>
           <p><strong>Status:</strong> ${labelStatus(apr.status)}</p>
+          ${possoAssinar ? `<button class="btn btn-primary" onclick="abrirModalAssinatura('${apr.id}')">Assinar esta APR</button>` : ""}
         </div>
 
         <div class="form-section">
-          <h4>Técnicos envolvidos</h4>
-          ${(tecs || []).map(t => `
-            <p>• ${escapeHtml(t.nome_tecnico)} ${t.responsavel ? "<strong>(Responsável)</strong>" : ""} — ${t.assinado ? "Assinado" : "Pendente"}</p>
-          `).join("") || "<p>Nenhum técnico vinculado.</p>"}
+          <h4>Técnicos envolvidos e assinaturas</h4>
+          <div class="assinatura-status-list">
+            ${tecsComAssinatura.length ? tecsComAssinatura.map(t => `
+              <div class="assinatura-status-card">
+                <div>
+                  <strong>${escapeHtml(t.nome_tecnico)}</strong> ${t.responsavel ? "<span class='small'>(Responsável)</span>" : ""}<br>
+                  ${t.assinado
+                    ? `<span class="badge finalizada">Assinado</span> <span class="small">${formatarData(t.assinado_em)}</span>`
+                    : `<span class="badge aguardando_assinaturas">Pendente</span>`}
+                  ${t.assinatura_url ? `<br><img class="assinatura-img" src="${t.assinatura_url}" alt="Assinatura de ${escapeHtml(t.nome_tecnico)}">` : ""}
+                </div>
+              </div>
+            `).join("") : "<p>Nenhum técnico vinculado.</p>"}
+          </div>
         </div>
 
         <div class="form-section">
@@ -2772,6 +2982,306 @@
 
     function fecharModalApr() {
       document.getElementById("modalDetalhesApr").classList.add("hidden");
+    }
+
+
+    async function carregarMinhasAssinaturas() {
+      const box = document.getElementById("listaMinhasAssinaturas");
+      if (!box) return;
+
+      box.innerHTML = `<p>Carregando...</p>`;
+
+      const { data: vinculos, error } = await supabaseClient
+        .from("apr_tecnicos")
+        .select("*")
+        .eq("usuario_id", usuarioAtual.id);
+
+      if (error) {
+        box.innerHTML = `<p class="danger-text">Erro ao carregar assinaturas: ${escapeHtml(error.message)}</p>`;
+        return;
+      }
+
+      const listaVinculos = vinculos || [];
+      if (!listaVinculos.length) {
+        box.innerHTML = `<p>Nenhuma APR vinculada ao seu usuário.</p>`;
+        return;
+      }
+
+      const aprIds = [...new Set(listaVinculos.map(v => v.apr_id).filter(Boolean))];
+      const { data: aprs, error: aprError } = await supabaseClient
+        .from("aprs")
+        .select("*")
+        .in("id", aprIds)
+        .order("criada_em", { ascending: false });
+
+      if (aprError) {
+        box.innerHTML = `<p class="danger-text">Erro ao carregar APRs: ${escapeHtml(aprError.message)}</p>`;
+        return;
+      }
+
+      const mapVinc = new Map(listaVinculos.map(v => [v.apr_id, v]));
+      const aprsLista = aprs || [];
+
+      box.innerHTML = aprsLista.map(apr => {
+        const vinc = mapVinc.get(apr.id);
+        const assinado = !!vinc?.assinado;
+
+        return `
+          <div class="assinatura-card">
+            <h4>${escapeHtml(apr.numero_apr || 'APR')}</h4>
+            <p><strong>OS:</strong> ${escapeHtml(apr.numero_os || '-')} • <strong>Cliente:</strong> ${escapeHtml(apr.cliente_nome || '-')}</p>
+            <p><strong>Serviço:</strong> ${escapeHtml(formatarTipoServico(apr.tipo_servico, apr.tipo_servico_outros))}</p>
+            <p><strong>Status da sua assinatura:</strong> ${assinado ? `<span class="badge finalizada">Assinada</span>` : `<span class="badge aguardando_assinaturas">Pendente</span>`}</p>
+            ${assinado ? `<p class="small">Assinada em: ${formatarData(vinc.assinado_em)}</p>` : ''}
+            <div class="row-actions">
+              <button class="btn btn-light btn-mini" onclick="verDetalhesApr('${apr.id}')">Ver APR</button>
+              ${!assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinatura('${apr.id}')">Assinar agora</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function abrirAssinaturaPorApr(aprId) {
+      const { data: vinculo, error } = await supabaseClient
+        .from("apr_tecnicos")
+        .select("*")
+        .eq("apr_id", aprId)
+        .eq("usuario_id", usuarioAtual.id)
+        .maybeSingle();
+
+      if (error) {
+        alert("Erro ao verificar assinatura: " + error.message);
+        return;
+      }
+
+      if (!vinculo) {
+        alert("Esta APR não está vinculada ao seu usuário para assinatura.");
+        return;
+      }
+
+      if (vinculo.assinado) {
+        alert("Você já assinou esta APR.");
+        return;
+      }
+
+      abrirModalAssinatura(aprId);
+    }
+
+    async function abrirModalAssinatura(aprId) {
+      clearMsg("assinaturaMsg");
+
+      const { data: apr, error: aprError } = await supabaseClient
+        .from("aprs")
+        .select("*")
+        .eq("id", aprId)
+        .single();
+
+      if (aprError || !apr) {
+        alert("Erro ao carregar APR para assinatura.");
+        return;
+      }
+
+      const { data: vinculo, error: vincError } = await supabaseClient
+        .from("apr_tecnicos")
+        .select("*")
+        .eq("apr_id", aprId)
+        .eq("usuario_id", usuarioAtual.id)
+        .maybeSingle();
+
+      if (vincError) {
+        alert("Erro ao carregar vínculo de assinatura: " + vincError.message);
+        return;
+      }
+
+      if (!vinculo) {
+        alert("Você não está vinculado a esta APR para assinar.");
+        return;
+      }
+
+      if (vinculo.assinado) {
+        alert("Esta APR já foi assinada por você.");
+        return;
+      }
+
+      assinaturaAprAtual = { apr, vinculo };
+
+      document.getElementById("assinaturaAprInfo").innerHTML = `
+        <h4>${escapeHtml(apr.numero_apr || 'APR')}</h4>
+        <p><strong>Técnico:</strong> ${escapeHtml(vinculo.nome_tecnico || perfilAtual?.nome || '-')}</p>
+        <p><strong>OS:</strong> ${escapeHtml(apr.numero_os || '-')}</p>
+        <p><strong>Cliente:</strong> ${escapeHtml(apr.cliente_nome || '-')}</p>
+        <p><strong>Atividade:</strong> ${escapeHtml(apr.descricao_atividade || '-')}</p>
+      `;
+
+      const check = document.getElementById("checkDeclaracaoAssinatura");
+      if (check) check.checked = false;
+
+      document.getElementById("modalAssinaturaApr").classList.remove("hidden");
+      setTimeout(inicializarCanvasAssinatura, 80);
+    }
+
+    function fecharModalAssinatura() {
+      document.getElementById("modalAssinaturaApr").classList.add("hidden");
+      assinaturaAprAtual = null;
+      clearMsg("assinaturaMsg");
+    }
+
+    function inicializarCanvasAssinatura() {
+      const canvas = document.getElementById("signatureCanvas");
+      if (!canvas) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+      canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+      ctx.lineWidth = 2.6;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#101828";
+
+      signatureState = { drawing: false, signed: false, canvasReady: true };
+
+      canvas.onpointerdown = (e) => {
+        e.preventDefault();
+        signatureState.drawing = true;
+        signatureState.signed = true;
+        const p = getCanvasPoint(canvas, e);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+      };
+
+      canvas.onpointermove = (e) => {
+        if (!signatureState.drawing) return;
+        e.preventDefault();
+        const p = getCanvasPoint(canvas, e);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      };
+
+      canvas.onpointerup = () => signatureState.drawing = false;
+      canvas.onpointerleave = () => signatureState.drawing = false;
+      canvas.onpointercancel = () => signatureState.drawing = false;
+    }
+
+    function getCanvasPoint(canvas, event) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      };
+    }
+
+    function limparAssinaturaCanvas() {
+      const canvas = document.getElementById("signatureCanvas");
+      if (!canvas) return;
+
+      const ctx = canvas.getContext("2d");
+      const rect = canvas.getBoundingClientRect();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+      signatureState.signed = false;
+    }
+
+    function canvasToBlob(canvas) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(blob => {
+          if (!blob) reject(new Error("Não foi possível gerar a imagem da assinatura."));
+          else resolve(blob);
+        }, "image/png", 0.95);
+      });
+    }
+
+    async function gerarHashBlob(blob) {
+      const buffer = await blob.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function confirmarAssinaturaApr() {
+      clearMsg("assinaturaMsg");
+
+      if (!assinaturaAprAtual?.apr || !assinaturaAprAtual?.vinculo) {
+        setMsg("assinaturaMsg", "err", "Nenhuma APR carregada para assinatura.");
+        return;
+      }
+
+      const check = document.getElementById("checkDeclaracaoAssinatura");
+      if (!check?.checked) {
+        setMsg("assinaturaMsg", "err", "Marque a declaração de ciência antes de assinar.");
+        return;
+      }
+
+      if (!signatureState.signed) {
+        setMsg("assinaturaMsg", "err", "Assine no quadro antes de confirmar.");
+        return;
+      }
+
+      const canvas = document.getElementById("signatureCanvas");
+      const blob = await canvasToBlob(canvas);
+      const hash = await gerarHashBlob(blob);
+
+      const apr = assinaturaAprAtual.apr;
+      const vinculo = assinaturaAprAtual.vinculo;
+      const agora = new Date();
+      const ano = agora.getFullYear();
+      const mes = String(agora.getMonth() + 1).padStart(2, "0");
+      const nomeArquivo = `${Date.now()}-${usuarioAtual.id}.png`;
+      const path = `assinaturas/${ano}/${mes}/${apr.numero_apr || apr.id}/${nomeArquivo}`;
+
+      const { error: uploadError } = await supabaseClient
+        .storage
+        .from("apr-arquivos")
+        .upload(path, blob, {
+          contentType: "image/png",
+          upsert: false
+        });
+
+      if (uploadError) {
+        setMsg("assinaturaMsg", "err", "Erro ao enviar assinatura: " + uploadError.message);
+        return;
+      }
+
+      const { error: updateError } = await supabaseClient
+        .from("apr_tecnicos")
+        .update({
+          assinado: true,
+          assinatura_pendente: false,
+          assinatura_storage_path: path,
+          assinatura_mime_type: "image/png",
+          assinatura_hash: hash,
+          assinado_em: agora.toISOString(),
+          user_agent_assinatura: navigator.userAgent || null
+        })
+        .eq("id", vinculo.id)
+        .eq("usuario_id", usuarioAtual.id);
+
+      if (updateError) {
+        setMsg("assinaturaMsg", "err", "Assinatura enviada, mas erro ao salvar no banco: " + updateError.message);
+        return;
+      }
+
+      await supabaseClient.from("apr_linha_tempo").insert({
+        apr_id: apr.id,
+        usuario_id: usuarioAtual.id,
+        acao: "APR assinada",
+        detalhes: `APR assinada por ${vinculo.nome_tecnico || perfilAtual?.nome || 'técnico'}.`,
+        dados: { assinatura_hash: hash, assinatura_storage_path: path }
+      });
+
+      setMsg("assinaturaMsg", "ok", "Assinatura registrada com sucesso.");
+
+      setTimeout(async () => {
+        fecharModalAssinatura();
+        await carregarMinhasAssinaturas();
+        await carregarAprs();
+        await verDetalhesApr(apr.id);
+      }, 900);
     }
 
     function renderRegras() {
