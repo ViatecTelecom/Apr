@@ -1504,6 +1504,7 @@
                   <option value="">Todos</option>
                   <option value="rascunho">Rascunho</option>
                   <option value="aguardando_assinaturas">Aguardando assinaturas</option>
+                  <option value="assinado">Assinado</option>
                   <option value="finalizada">Finalizada</option>
                   <option value="servico_iniciado">Serviço iniciado</option>
                   <option value="servico_finalizado">Serviço finalizado</option>
@@ -1583,6 +1584,12 @@
               </div>
 
               <div class="field">
+                <label>E-mail do login</label>
+                <input id="tecEmailLogin" type="email" placeholder="email usado no Supabase Auth">
+                <p class="small">Crie primeiro o usuário em Authentication &gt; Users. Ao salvar, o sistema vincula este técnico ao login pelo e-mail.</p>
+              </div>
+
+              <div class="field">
                 <label>Status</label>
                 <select id="tecAtivo">
                   <option value="true">Ativo</option>
@@ -1626,12 +1633,13 @@
                       <tr>
                         <th>Nome</th>
                         <th>Cargo</th>
+                        <th>Login</th>
                         <th>Status</th>
                         <th>Ações</th>
                       </tr>
                     </thead>
                     <tbody id="tbodyTecnicosAtivos">
-                      <tr><td colspan="4">Carregando...</td></tr>
+                      <tr><td colspan="5">Carregando...</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -1647,12 +1655,13 @@
                       <tr>
                         <th>Nome</th>
                         <th>Cargo</th>
+                        <th>Login</th>
                         <th>Status</th>
                         <th>Ações</th>
                       </tr>
                     </thead>
                     <tbody id="tbodyTecnicosInativos">
-                      <tr><td colspan="4">Carregando...</td></tr>
+                      <tr><td colspan="5">Carregando...</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -1900,6 +1909,7 @@
       const map = {
         rascunho: "Rascunho",
         aguardando_assinaturas: "Aguardando assinaturas",
+        assinado: "Assinado",
         finalizada: "Finalizada",
         servico_iniciado: "Serviço iniciado",
         servico_finalizado: "Serviço finalizado",
@@ -2117,7 +2127,8 @@
       return tecnicosCache.filter(t =>
         String(t.nome || "").toLowerCase().includes(termo) ||
         String(t.cargo || "").toLowerCase().includes(termo) ||
-        String(t.telefone || "").toLowerCase().includes(termo)
+        String(t.telefone || "").toLowerCase().includes(termo) ||
+        String(t.usuario_email || "").toLowerCase().includes(termo)
       );
     }
 
@@ -2141,13 +2152,17 @@
 
       const renderRows = (arr, ativo) => {
         if (!arr.length) {
-          return `<tr><td colspan="4">Nenhum técnico ${ativo ? "ativo" : "inativo"} encontrado.</td></tr>`;
+          return `<tr><td colspan="5">Nenhum técnico ${ativo ? "ativo" : "inativo"} encontrado.</td></tr>`;
         }
 
         return arr.map(t => `
           <tr>
             <td><strong>${escapeHtml(t.nome)}</strong></td>
             <td>${escapeHtml(t.cargo || "-")}</td>
+            <td>
+              ${t.usuario_email ? escapeHtml(t.usuario_email) : '<span class="badge aguardando_assinaturas">Sem e-mail</span>'}
+              ${t.usuario_id ? '<br><span class="small">Vinculado</span>' : '<br><span class="small danger-text">Sem vínculo</span>'}
+            </td>
             <td>${t.ativo ? '<span class="badge finalizada">Ativo</span>' : '<span class="badge inativo">Inativo</span>'}</td>
             <td>
               <div class="row-actions">
@@ -2167,6 +2182,7 @@
             <strong>${escapeHtml(t.nome)}</strong>
             <div class="small" style="margin-top:4px;">${escapeHtml(t.cargo || "-")}</div>
             ${t.telefone ? `<div class="small" style="margin-top:4px;">Telefone: ${escapeHtml(t.telefone)}</div>` : ""}
+            <div class="small" style="margin-top:4px;">Login: ${t.usuario_email ? escapeHtml(t.usuario_email) : 'Sem e-mail'} ${t.usuario_id ? '• Vinculado' : '• Sem vínculo'}</div>
             <div style="margin-top:8px;">
               ${t.ativo ? '<span class="badge finalizada">Ativo</span>' : '<span class="badge inativo">Inativo</span>'}
             </div>
@@ -2224,6 +2240,7 @@
       document.getElementById("tecNome").value = t.nome || "";
       document.getElementById("tecCargo").value = t.cargo || "";
       document.getElementById("tecTelefone").value = t.telefone || "";
+      document.getElementById("tecEmailLogin").value = t.usuario_email || "";
       document.getElementById("tecAtivo").value = String(!!t.ativo);
 
       document.getElementById("tituloFormTecnico").textContent = "Editando técnico";
@@ -2239,6 +2256,7 @@
       document.getElementById("tecNome").value = "";
       document.getElementById("tecCargo").value = "Técnico/Auxiliar de Telecomunicações";
       document.getElementById("tecTelefone").value = "";
+      document.getElementById("tecEmailLogin").value = "";
       document.getElementById("tecAtivo").value = "true";
 
       document.getElementById("tituloFormTecnico").textContent = "Novo técnico";
@@ -2259,6 +2277,7 @@
       const nome = document.getElementById("tecNome").value.trim();
       const cargo = document.getElementById("tecCargo").value.trim();
       const telefone = document.getElementById("tecTelefone").value.trim();
+      const emailLogin = document.getElementById("tecEmailLogin").value.trim().toLowerCase();
       const ativo = document.getElementById("tecAtivo").value === "true";
 
       if (!nome) {
@@ -2266,19 +2285,55 @@
         return;
       }
 
+      let usuarioIdVinculado = null;
+
+      if (emailLogin) {
+        const { data: uidEncontrado, error: uidError } = await supabaseClient
+          .rpc("buscar_usuario_auth_por_email", { p_email: emailLogin });
+
+        if (uidError) {
+          setMsg("tecMsg", "err", "Erro ao buscar usuário Auth pelo e-mail. Rode o SQL de ajuste da função buscar_usuario_auth_por_email. Detalhe: " + uidError.message);
+          return;
+        }
+
+        if (!uidEncontrado) {
+          setMsg("tecMsg", "err", "Nenhum usuário de login encontrado com este e-mail. Crie primeiro em Authentication > Users e depois salve o técnico.");
+          return;
+        }
+
+        usuarioIdVinculado = uidEncontrado;
+      }
+
+      const payloadTecnico = {
+        nome,
+        cargo,
+        telefone,
+        ativo
+      };
+
+      // Só altera o vínculo de login quando o admin informar um e-mail.
+      // Assim, ao editar cargo/telefone/status, não apagamos o usuario_id já existente.
+      if (emailLogin) {
+        payloadTecnico.usuario_email = emailLogin;
+        payloadTecnico.usuario_id = usuarioIdVinculado;
+      } else if (!id) {
+        payloadTecnico.usuario_email = null;
+        payloadTecnico.usuario_id = null;
+      }
+
       let error;
 
       if (id) {
         const res = await supabaseClient
           .from("tecnicos")
-          .update({ nome, cargo, telefone, ativo })
+          .update(payloadTecnico)
           .eq("id", id);
 
         error = res.error;
       } else {
         const res = await supabaseClient
           .from("tecnicos")
-          .insert({ nome, cargo, telefone, ativo });
+          .insert(payloadTecnico);
 
         error = res.error;
       }
@@ -2865,7 +2920,22 @@
       const descricao_atividade = document.getElementById("aprDescricao").value.trim();
       const observacoes_adicionais = document.getElementById("aprObservacoes").value.trim();
 
+      // Garante que o técnico que está criando a APR entre automaticamente como envolvido.
+      // Isso precisa acontecer ANTES da validação de técnicos selecionados.
+      const tecnicoLogado = getTecnicoLogado();
+      if (perfilAtual?.perfil !== "admin") {
+        if (!tecnicoLogado) {
+          setMsg("novaAprMsg", "err", "Seu usuário está como técnico, mas não está vinculado a um cadastro ativo em Técnicos. Peça para o admin vincular seu usuário ao técnico antes de criar APR.");
+          return;
+        }
+        tecnicosSelecionadosApr.add(tecnicoLogado.id);
+      }
+
       const tecnicosSelecionados = getTecnicosSelecionados();
+      if (tecnicoLogado && !tecnicosSelecionados.some(t => t.id === tecnicoLogado.id)) {
+        tecnicosSelecionados.unshift(tecnicoLogado);
+      }
+
       const respostas = getRespostasChecklist();
 
       if (!numero_os && !protocolo_os) {
@@ -2918,11 +2988,6 @@
       if (obsObrigatorias.length > 0) {
         setMsg("novaAprMsg", "err", "Existe resposta Não com observação obrigatória. Volte na pergunta e preencha.");
         return;
-      }
-
-      const tecnicoLogado = getTecnicoLogado();
-      if (tecnicoLogado && !tecnicosSelecionados.some(t => t.id === tecnicoLogado.id)) {
-        tecnicosSelecionados.unshift(tecnicoLogado);
       }
 
       const tecnicoResponsavel = tecnicoLogado || tecnicosSelecionados[0];
@@ -3705,7 +3770,7 @@
             ${assinado ? `<p class="small">Assinada em: ${formatarData(vinc.assinado_em)}</p>` : ''}
             <div class="row-actions">
               <button class="btn btn-light btn-mini" onclick="verDetalhesApr('${apr.id}')">Ver APR</button>
-              ${!assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinatura('${apr.id}')">Assinar agora</button>` : ''}
+              ${!assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinatura('${apr.id}')">Assinar digitalmente</button>` : ''}
             </div>
           </div>
         `;
@@ -3873,6 +3938,48 @@
       return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
     }
 
+    async function atualizarStatusAprDepoisDasAssinaturas(aprId) {
+      const { data: vinculos, error: vinculosError } = await supabaseClient
+        .from("apr_tecnicos")
+        .select("id, assinado")
+        .eq("apr_id", aprId);
+
+      if (vinculosError) {
+        console.warn("Erro ao conferir assinaturas da APR:", vinculosError.message);
+        return;
+      }
+
+      const todosAssinaram = Array.isArray(vinculos) && vinculos.length > 0 && vinculos.every(v => !!v.assinado);
+      if (!todosAssinaram) return;
+
+      const { data: aprAtual, error: aprErro } = await supabaseClient
+        .from("aprs")
+        .select("id, status")
+        .eq("id", aprId)
+        .single();
+
+      if (aprErro || !aprAtual) return;
+      if (!["aguardando_assinaturas", "rascunho"].includes(aprAtual.status)) return;
+
+      const { error: statusError } = await supabaseClient
+        .from("aprs")
+        .update({ status: "assinado" })
+        .eq("id", aprId);
+
+      if (statusError) {
+        console.warn("Erro ao mudar status da APR para assinado:", statusError.message);
+        return;
+      }
+
+      await supabaseClient.from("apr_linha_tempo").insert({
+        apr_id: aprId,
+        usuario_id: usuarioAtual?.id || null,
+        acao: "APR assinada",
+        detalhes: "Todas as assinaturas foram concluídas. Status alterado para Assinado.",
+        dados: { status: "assinado" }
+      });
+    }
+
     async function confirmarAssinaturaApr() {
       clearMsg("assinaturaMsg");
 
@@ -3943,6 +4050,8 @@
         detalhes: `APR assinada por ${vinculo.nome_tecnico || perfilAtual?.nome || 'técnico'}.`,
         dados: { assinatura_hash: hash, assinatura_storage_path: path }
       });
+
+      await atualizarStatusAprDepoisDasAssinaturas(apr.id);
 
       setMsg("assinaturaMsg", "ok", "Assinatura registrada com sucesso.");
 
@@ -4065,6 +4174,42 @@
         bloqueia_finalizacao_se_nao: boolFromSelect("regraBloqueia"),
         criticidade: document.getElementById("regraCriticidade").value
       };
+
+      let usuarioIdVinculado = null;
+
+      if (emailLogin) {
+        const { data: uidEncontrado, error: uidError } = await supabaseClient
+          .rpc("buscar_usuario_auth_por_email", { p_email: emailLogin });
+
+        if (uidError) {
+          setMsg("tecMsg", "err", "Erro ao buscar usuário Auth pelo e-mail. Rode o SQL de ajuste da função buscar_usuario_auth_por_email. Detalhe: " + uidError.message);
+          return;
+        }
+
+        if (!uidEncontrado) {
+          setMsg("tecMsg", "err", "Nenhum usuário de login encontrado com este e-mail. Crie primeiro em Authentication > Users e depois salve o técnico.");
+          return;
+        }
+
+        usuarioIdVinculado = uidEncontrado;
+      }
+
+      const payloadTecnico = {
+        nome,
+        cargo,
+        telefone,
+        ativo
+      };
+
+      // Só altera o vínculo de login quando o admin informar um e-mail.
+      // Assim, ao editar cargo/telefone/status, não apagamos o usuario_id já existente.
+      if (emailLogin) {
+        payloadTecnico.usuario_email = emailLogin;
+        payloadTecnico.usuario_id = usuarioIdVinculado;
+      } else if (!id) {
+        payloadTecnico.usuario_email = null;
+        payloadTecnico.usuario_id = null;
+      }
 
       let error;
 
