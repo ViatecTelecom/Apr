@@ -1110,6 +1110,137 @@
         font-size: 11px;
       }
     }
+
+
+    /* Ajuste especial para celular: questionário mais compacto e fácil de usar */
+    .answer-btn.answer-disabled,
+    .answer-btn:disabled {
+      background: #f8fafc;
+      color: #98a2b3;
+      border-color: #e4e7ec;
+      box-shadow: none;
+      transform: none;
+    }
+
+    @media (max-width: 600px) {
+      .main {
+        padding: 12px;
+      }
+
+      .topbar {
+        margin-bottom: 14px;
+      }
+
+      .topbar h2 {
+        font-size: 22px;
+      }
+
+      .topbar p {
+        font-size: 13px;
+      }
+
+      .card {
+        padding: 13px;
+        border-radius: 16px;
+      }
+
+      .form-section {
+        padding: 12px;
+        border-radius: 14px;
+        margin-bottom: 12px;
+      }
+
+      .form-section h4 {
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+
+      .wizard-box {
+        padding: 14px;
+        border-radius: 18px;
+        box-shadow: none;
+      }
+
+      .wizard-progress {
+        height: 8px;
+        margin-bottom: 13px;
+      }
+
+      .wizard-header {
+        margin-bottom: 10px;
+      }
+
+      .wizard-title {
+        font-size: 12px;
+        margin-bottom: 6px;
+        letter-spacing: .02em;
+      }
+
+      .wizard-question {
+        font-size: 18px;
+        line-height: 1.25;
+        margin-bottom: 8px;
+      }
+
+      .answer-buttons {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 8px;
+        margin: 12px 0;
+      }
+
+      .answer-btn {
+        min-height: 58px;
+        padding: 10px 4px;
+        border-radius: 14px;
+        font-size: 14px;
+        line-height: 1.15;
+      }
+
+      .answer-btn.answer-disabled,
+      .answer-btn:disabled {
+        font-size: 12px;
+      }
+
+      .wizard-footer {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .wizard-footer .btn {
+        width: 100%;
+        padding: 12px 10px;
+        border-radius: 13px;
+      }
+
+      .question-summary {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 6px;
+        padding: 2px 0 8px;
+        margin-top: 12px;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .question-summary::-webkit-scrollbar {
+        display: none;
+      }
+
+      .dot {
+        flex: 0 0 auto;
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+      }
+
+      input,
+      select,
+      textarea {
+        font-size: 16px;
+      }
+    }
+
   </style>
 </head>
 
@@ -2331,7 +2462,7 @@
           <div class="answer-buttons">
             <button type="button" class="answer-btn ${respostaAtual === 'S' ? 'selected s' : ''}" onclick="responderChecklist('${item.id}', 'S')">✓ Sim</button>
             <button type="button" class="answer-btn ${respostaAtual === 'N' ? 'selected n' : ''}" onclick="responderChecklist('${item.id}', 'N')">✕ Não</button>
-            ${item.aceita_na ? `<button type="button" class="answer-btn ${respostaAtual === 'NA' ? 'selected na' : ''}" onclick="responderChecklist('${item.id}', 'NA')">— N/A</button>` : `<button type="button" class="answer-btn" disabled>N/A indisponível</button>`}
+            ${item.aceita_na ? `<button type="button" class="answer-btn ${respostaAtual === 'NA' ? 'selected na' : ''}" onclick="responderChecklist('${item.id}', 'NA')">— N/A</button>` : `<button type="button" class="answer-btn answer-disabled" disabled title="Não se aplica indisponível para esta pergunta">N/A</button>`}
           </div>
 
           ${respostaAtual === 'N' && item.exige_observacao_se_nao ? `
@@ -3036,7 +3167,6 @@
             <td>
               <div class="row-actions">
                 <button class="btn btn-light btn-mini" onclick="verDetalhesApr('${apr.id}')">Ver</button>
-                ${perfilAtual?.perfil === 'admin' ? `<button class="btn btn-green btn-mini" onclick="baixarAprPdf('${apr.id}')">Baixar APR</button>` : ''}
                 ${perfilAtual?.perfil === 'admin'
                   ? (podeEditar ? `<button class="btn btn-primary btn-mini" onclick="editarApr('${apr.id}')">Editar</button>` : `<button class="btn btn-light btn-mini" disabled>Bloqueada</button>`)
                   : `<button class="btn btn-primary btn-mini" onclick="abrirAssinaturaPorApr('${apr.id}')">Assinar</button>`}
@@ -3293,7 +3423,138 @@
             .foto img { width: 100%; max-height: 230px; object-fit: contain; }
             .assinatura-img { max-width: 220px; max-height: 90px; border: 1px solid #d0d5dd; margin-top: 6px; }
             @media print { body { margin: 12mm; } button { display: none; } .page-break { page-break-before: always; } }
-          </style>
+        
+
+    /* Ajuste especial para celular: questionário mais compacto e fácil de usar */
+    .answer-btn.answer-disabled,
+    .answer-btn:disabled {
+      background: #f8fafc;
+      color: #98a2b3;
+      border-color: #e4e7ec;
+      box-shadow: none;
+      transform: none;
+    }
+
+    @media (max-width: 600px) {
+      .main {
+        padding: 12px;
+      }
+
+      .topbar {
+        margin-bottom: 14px;
+      }
+
+      .topbar h2 {
+        font-size: 22px;
+      }
+
+      .topbar p {
+        font-size: 13px;
+      }
+
+      .card {
+        padding: 13px;
+        border-radius: 16px;
+      }
+
+      .form-section {
+        padding: 12px;
+        border-radius: 14px;
+        margin-bottom: 12px;
+      }
+
+      .form-section h4 {
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+
+      .wizard-box {
+        padding: 14px;
+        border-radius: 18px;
+        box-shadow: none;
+      }
+
+      .wizard-progress {
+        height: 8px;
+        margin-bottom: 13px;
+      }
+
+      .wizard-header {
+        margin-bottom: 10px;
+      }
+
+      .wizard-title {
+        font-size: 12px;
+        margin-bottom: 6px;
+        letter-spacing: .02em;
+      }
+
+      .wizard-question {
+        font-size: 18px;
+        line-height: 1.25;
+        margin-bottom: 8px;
+      }
+
+      .answer-buttons {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 8px;
+        margin: 12px 0;
+      }
+
+      .answer-btn {
+        min-height: 58px;
+        padding: 10px 4px;
+        border-radius: 14px;
+        font-size: 14px;
+        line-height: 1.15;
+      }
+
+      .answer-btn.answer-disabled,
+      .answer-btn:disabled {
+        font-size: 12px;
+      }
+
+      .wizard-footer {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .wizard-footer .btn {
+        width: 100%;
+        padding: 12px 10px;
+        border-radius: 13px;
+      }
+
+      .question-summary {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 6px;
+        padding: 2px 0 8px;
+        margin-top: 12px;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .question-summary::-webkit-scrollbar {
+        display: none;
+      }
+
+      .dot {
+        flex: 0 0 auto;
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+      }
+
+      input,
+      select,
+      textarea {
+        font-size: 16px;
+      }
+    }
+
+  </style>
         </head>
         <body>
           <div class="header">
