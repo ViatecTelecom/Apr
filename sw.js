@@ -1,10 +1,11 @@
-const CACHE_NAME = "apr-digital-viatec-v13";
+const CACHE_NAME = "apr-digital-viatec-v16";
 
 const APP_SHELL = [
-  "./",
-  "./index.html",
-  "./manifest.json",
-  "./logo.png"
+  "/Apr/",
+  "/Apr/index.html",
+  "/Apr/manifest.json",
+  "/Apr/logo.png",
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
 ];
 
 self.addEventListener("install", (event) => {
@@ -41,7 +42,7 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // Não tentar cachear Supabase
+  // Nunca cachear chamadas reais do Supabase/API.
   if (
     url.hostname.includes("supabase.co") ||
     url.hostname.includes("supabase.com")
@@ -50,24 +51,26 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Para navegação/página principal:
-  // tenta internet; se falhar, entrega index.html do cache.
+  // Navegação principal: abre index offline.
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
         .then((response) => {
           const clone = response.clone();
+
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put("./index.html", clone);
-            cache.put("./", clone.clone());
+            cache.put("/Apr/", clone.clone());
+            cache.put("/Apr/index.html", clone);
           });
+
           return response;
         })
         .catch(async () => {
           const cache = await caches.open(CACHE_NAME);
+
           return (
-            (await cache.match("./index.html")) ||
-            (await cache.match("./")) ||
+            (await cache.match("/Apr/index.html")) ||
+            (await cache.match("/Apr/")) ||
             new Response("APR offline não encontrado no cache. Abra o sistema uma vez com internet.", {
               status: 503,
               headers: { "Content-Type": "text/plain; charset=utf-8" }
@@ -78,7 +81,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Para arquivos estáticos: cache first
+  // Arquivos estáticos e bibliotecas: cache first.
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -101,7 +104,12 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(async () => {
           const cache = await caches.open(CACHE_NAME);
-          return await cache.match("./index.html");
+
+          if (request.destination === "script") {
+            return await cache.match("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2");
+          }
+
+          return await cache.match("/Apr/index.html");
         });
     })
   );
