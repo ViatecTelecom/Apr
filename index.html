@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>APR Digital ViaTec</title>
+  <title>PT - Permissão de Trabalho | APR Digital ViaTec</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -1313,8 +1313,8 @@
       <div class="logo-area">
         <img src="logo.png" alt="Logo ViaTec" onerror="this.style.display='none'; document.getElementById('loginLogoFallback').style.display='inline-flex';">
         <div id="loginLogoFallback" class="logo-fallback" style="display:none;">VIATEC</div>
-        <h1>APR Digital ViaTec</h1>
-        <p>Permissão de Trabalho e Análise Preliminar de Risco</p>
+        <h1>PT - Permissão de Trabalho</h1>
+        <p>APR Digital ViaTec • Análise Preliminar de Risco</p>
       </div>
 
       <div class="field">
@@ -1347,7 +1347,7 @@
 
   <section id="appPage" class="hidden">
     <div class="mobile-top">
-      <strong>APR Digital</strong>
+      <strong>PT - Permissão de Trabalho</strong>
       <button class="btn btn-light" onclick="toggleMenu()">Menu</button>
     </div>
 
@@ -1357,8 +1357,8 @@
           <img src="logo.png" alt="ViaTec" onerror="this.style.display='none'; document.getElementById('brandFallback').style.display='flex';">
           <div id="brandFallback" class="brand-fallback" style="display:none;">VT</div>
           <div>
-            <div class="brand-title">APR Digital</div>
-            <div class="brand-sub">ViaTec Telecom</div>
+            <div class="brand-title">PT - Permissão de Trabalho</div>
+            <div class="brand-sub">APR Digital • ViaTec Telecom</div>
           </div>
         </div>
 
@@ -1567,6 +1567,7 @@
                   <option value="">Todos</option>
                   <option value="rascunho">Rascunho</option>
                   <option value="aguardando_assinaturas">Aguardando assinaturas</option>
+                  <option value="assinado">Assinado</option>
                   <option value="finalizada">Finalizada</option>
                   <option value="servico_iniciado">Serviço iniciado</option>
                   <option value="servico_finalizado">Serviço finalizado</option>
@@ -1575,7 +1576,25 @@
                 </select>
               </div>
 
+              <div class="field">
+                <label>Técnico</label>
+                <select id="filtroTecnicoHistorico">
+                  <option value="">Todos os técnicos</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label>Data inicial</label>
+                <input id="filtroDataInicio" type="date">
+              </div>
+
+              <div class="field">
+                <label>Data final</label>
+                <input id="filtroDataFim" type="date">
+              </div>
+
               <button class="btn btn-primary btn-full-mobile" onclick="carregarAprs()">Filtrar</button>
+              <button class="btn btn-light btn-full-mobile" onclick="limparFiltrosHistorico()">Limpar filtros</button>
             </div>
 
             <div class="table-wrap">
@@ -2194,7 +2213,37 @@
       tecnicosCache = data || [];
       renderTabelaTecnicos();
       renderTecnicosNovaApr();
+      renderFiltroTecnicoHistorico();
       await atualizarDashboard();
+    }
+
+    function renderFiltroTecnicoHistorico() {
+      const select = document.getElementById("filtroTecnicoHistorico");
+      if (!select) return;
+
+      const valorAtual = select.value || "";
+      const lista = [...tecnicosCache].sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+
+      select.innerHTML = `<option value="">Todos os técnicos</option>` + lista.map(t => `
+        <option value="${t.id}">${escapeHtml(t.nome || "Sem nome")}${t.ativo ? "" : " (inativo)"}</option>
+      `).join("");
+
+      if (valorAtual && lista.some(t => t.id === valorAtual)) select.value = valorAtual;
+    }
+
+    function limparFiltrosHistorico() {
+      ["filtroOs", "filtroCliente", "filtroDataInicio", "filtroDataFim"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
+
+      const status = document.getElementById("filtroStatus");
+      if (status) status.value = "";
+
+      const tecnico = document.getElementById("filtroTecnicoHistorico");
+      if (tecnico) tecnico.value = "";
+
+      carregarAprs();
     }
 
     function getTecnicosFiltradosCadastro() {
@@ -3203,6 +3252,9 @@
       const filtroOs = document.getElementById("filtroOs")?.value.trim();
       const filtroCliente = document.getElementById("filtroCliente")?.value.trim();
       const filtroStatus = document.getElementById("filtroStatus")?.value;
+      const filtroTecnico = document.getElementById("filtroTecnicoHistorico")?.value;
+      const filtroDataInicio = document.getElementById("filtroDataInicio")?.value;
+      const filtroDataFim = document.getElementById("filtroDataFim")?.value;
 
       let lista = [];
 
@@ -3215,6 +3267,8 @@
 
         if (filtroStatus) query = query.eq("status", filtroStatus);
         if (filtroCliente) query = query.ilike("cliente_nome", `%${filtroCliente}%`);
+        if (filtroDataInicio) query = query.gte("criada_em", `${filtroDataInicio}T00:00:00`);
+        if (filtroDataFim) query = query.lte("criada_em", `${filtroDataFim}T23:59:59`);
 
         const { data, error } = await query;
 
@@ -3249,6 +3303,8 @@
 
         if (filtroStatus) query = query.eq("status", filtroStatus);
         if (filtroCliente) query = query.ilike("cliente_nome", `%${filtroCliente}%`);
+        if (filtroDataInicio) query = query.gte("criada_em", `${filtroDataInicio}T00:00:00`);
+        if (filtroDataFim) query = query.lte("criada_em", `${filtroDataFim}T23:59:59`);
 
         const { data, error } = await query;
         if (error) {
@@ -3260,6 +3316,21 @@
       }
 
       aprsCache = lista;
+
+      if (filtroTecnico) {
+        const { data: vinculosTec, error: vincTecError } = await supabaseClient
+          .from("apr_tecnicos")
+          .select("apr_id")
+          .eq("tecnico_id", filtroTecnico);
+
+        if (vincTecError) {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="7">Erro ao filtrar por técnico: ${escapeHtml(vincTecError.message)}</td></tr>`;
+          return;
+        }
+
+        const aprIdsTecnico = new Set((vinculosTec || []).map(v => v.apr_id).filter(Boolean));
+        lista = lista.filter(a => aprIdsTecnico.has(a.id));
+      }
 
       if (filtroOs) {
         const termo = filtroOs.toLowerCase();
@@ -3434,6 +3505,7 @@
                   ${t.assinado
                     ? `<span class="badge finalizada">Assinado</span> <span class="small">${formatarData(t.assinado_em)}</span>`
                     : `<span class="badge aguardando_assinaturas">Pendente</span>`}
+                  ${formatarLocalizacaoAssinatura(t)}
                   ${t.assinatura_url ? `<br><img class="assinatura-img" src="${t.assinatura_url}" alt="Assinatura de ${escapeHtml(t.nome_tecnico)}">` : ""}
                 </div>
               </div>
@@ -3744,7 +3816,7 @@
           <div class="header">
             <div>
               <div class="brand">VIATEC</div>
-              <h1>APR Digital - Análise Preliminar de Risco</h1>
+              <h1>PT - Permissão de Trabalho / APR - Análise Preliminar de Risco</h1>
               <p>Documento gerado em ${formatarData(new Date().toISOString())}</p>
             </div>
             <div>
@@ -3780,7 +3852,7 @@
                 <tr>
                   <td>${escapeHtml(t.nome_tecnico || "-")} ${t.responsavel ? "(Responsável)" : ""}</td>
                   <td>${escapeHtml(t.cargo || "-")}</td>
-                  <td>${t.assinado ? `<span class="badge ok">Assinado</span><br>${formatarData(t.assinado_em)}` : `<span class="badge pend">Pendente</span>`}</td>
+                  <td>${t.assinado ? `<span class="badge ok">Assinado</span><br>${formatarData(t.assinado_em)}${formatarLocalizacaoAssinatura(t)}` : `<span class="badge pend">Pendente</span>`}</td>
                   <td>${t.assinatura_url ? `<img class="assinatura-img" src="${t.assinatura_url}">` : "-"}</td>
                 </tr>
               `).join("")}
@@ -3968,6 +4040,7 @@
         <p><strong>OS:</strong> ${escapeHtml(apr.numero_os || '-')}</p>
         <p><strong>Cliente:</strong> ${escapeHtml(apr.cliente_nome || '-')}</p>
         <p><strong>Atividade:</strong> ${escapeHtml(apr.descricao_atividade || '-')}</p>
+        <p class="small"><strong>Localização:</strong> ao confirmar a assinatura, o navegador irá solicitar permissão para capturar a localização do técnico e registrar junto da APR.</p>
 
         <div class="assinatura-fotos-box">
           <h4 style="margin-top:0;">Fotos da APR</h4>
@@ -4107,6 +4180,50 @@
       });
     }
 
+    function formatarLocalizacaoAssinatura(t) {
+      const lat = t?.assinatura_latitude;
+      const lng = t?.assinatura_longitude;
+      if (lat === null || lat === undefined || lng === null || lng === undefined) return "";
+
+      const precisao = t?.assinatura_precisao_metros ? ` • precisão aprox. ${Math.round(Number(t.assinatura_precisao_metros))}m` : "";
+      const quando = t?.assinatura_localizacao_capturada_em ? ` • ${formatarData(t.assinatura_localizacao_capturada_em)}` : "";
+      const url = `https://www.google.com/maps?q=${encodeURIComponent(lat + "," + lng)}`;
+
+      return `<br><span class="small"><strong>Localização:</strong> ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}${precisao}${quando} • <a href="${url}" target="_blank" rel="noopener">Abrir mapa</a></span>`;
+    }
+
+    function obterLocalizacaoAssinatura() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error("Este navegador não permite capturar localização."));
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            resolve({
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              precisao: pos.coords.accuracy || null,
+              capturadaEm: new Date().toISOString()
+            });
+          },
+          err => {
+            let msg = "Não foi possível capturar a localização.";
+            if (err.code === 1) msg = "Permissão de localização negada. Autorize a localização para assinar a APR.";
+            if (err.code === 2) msg = "Localização indisponível no momento. Ative o GPS/dados móveis e tente novamente.";
+            if (err.code === 3) msg = "Tempo esgotado ao capturar localização. Tente novamente.";
+            reject(new Error(msg));
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+          }
+        );
+      });
+    }
+
     async function confirmarAssinaturaApr() {
       clearMsg("assinaturaMsg");
 
@@ -4123,6 +4240,16 @@
 
       if (!signatureState.signed) {
         setMsg("assinaturaMsg", "err", "Assine no quadro antes de confirmar.");
+        return;
+      }
+
+      setMsg("assinaturaMsg", "ok", "Capturando localização do técnico...");
+
+      let localizacao;
+      try {
+        localizacao = await obterLocalizacaoAssinatura();
+      } catch (geoError) {
+        setMsg("assinaturaMsg", "err", geoError.message || "Não foi possível capturar a localização.");
         return;
       }
 
@@ -4160,6 +4287,10 @@
           assinatura_mime_type: "image/png",
           assinatura_hash: hash,
           assinado_em: agora.toISOString(),
+          assinatura_latitude: localizacao.latitude,
+          assinatura_longitude: localizacao.longitude,
+          assinatura_precisao_metros: localizacao.precisao,
+          assinatura_localizacao_capturada_em: localizacao.capturadaEm,
           user_agent_assinatura: navigator.userAgent || null
         })
         .eq("id", vinculo.id)
@@ -4175,7 +4306,16 @@
         usuario_id: usuarioAtual.id,
         acao: "APR assinada",
         detalhes: `APR assinada por ${vinculo.nome_tecnico || perfilAtual?.nome || 'técnico'}.`,
-        dados: { assinatura_hash: hash, assinatura_storage_path: path }
+        dados: {
+          assinatura_hash: hash,
+          assinatura_storage_path: path,
+          localizacao: {
+            latitude: localizacao.latitude,
+            longitude: localizacao.longitude,
+            precisao_metros: localizacao.precisao,
+            capturada_em: localizacao.capturadaEm
+          }
+        }
       });
 
       await atualizarStatusAprDepoisDasAssinaturas(apr.id);
