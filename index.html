@@ -1241,6 +1241,69 @@
       }
     }
 
+
+
+    .foto-card img.foto-clickable,
+    .foto-card .foto-abrir-link {
+      cursor: pointer;
+    }
+
+    .foto-abrir-link {
+      width: 100%;
+      justify-content: center;
+      margin-top: 6px;
+    }
+
+    .foto-viewer-modal {
+      width: min(980px, 96vw);
+      max-height: 94vh;
+    }
+
+    .foto-viewer-wrap {
+      background: #0b1220;
+      border-radius: 16px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 320px;
+    }
+
+    .foto-viewer-wrap img {
+      max-width: 100%;
+      max-height: 76vh;
+      object-fit: contain;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .assinatura-fotos-box {
+      margin-top: 12px;
+      border-top: 1px solid #e4e7ec;
+      padding-top: 12px;
+    }
+
+    .assinatura-fotos-box .foto-grid {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 600px) {
+      .foto-viewer-modal {
+        width: 98vw;
+        padding: 12px;
+      }
+
+      .foto-viewer-wrap {
+        min-height: 260px;
+        padding: 8px;
+      }
+
+      .foto-viewer-wrap img {
+        max-height: 72vh;
+      }
+    }
+
   </style>
 </head>
 
@@ -1504,7 +1567,6 @@
                   <option value="">Todos</option>
                   <option value="rascunho">Rascunho</option>
                   <option value="aguardando_assinaturas">Aguardando assinaturas</option>
-                  <option value="assinado">Assinado</option>
                   <option value="finalizada">Finalizada</option>
                   <option value="servico_iniciado">Serviço iniciado</option>
                   <option value="servico_finalizado">Serviço finalizado</option>
@@ -1773,6 +1835,22 @@
       <div id="conteudoDetalhesApr"></div>
     </div>
   </div>
+
+  <div id="modalVisualizadorFoto" class="modal-backdrop hidden">
+    <div class="modal foto-viewer-modal">
+      <div class="modal-header">
+        <h3 id="tituloVisualizadorFoto">Foto da APR</h3>
+        <button class="btn btn-light btn-mini" onclick="fecharVisualizadorFoto()">Fechar</button>
+      </div>
+      <div class="foto-viewer-wrap">
+        <img id="imgVisualizadorFoto" src="" alt="Foto da APR ampliada">
+      </div>
+      <div class="row-actions" style="margin-top:12px;justify-content:flex-end;">
+        <a id="linkAbrirFotoNovaAba" class="btn btn-primary btn-mini" href="#" target="_blank" rel="noopener">Abrir em nova aba</a>
+      </div>
+    </div>
+  </div>
+
 
 
 
@@ -2308,18 +2386,10 @@
         nome,
         cargo,
         telefone,
-        ativo
+        ativo,
+        usuario_email: emailLogin || null,
+        usuario_id: usuarioIdVinculado
       };
-
-      // Só altera o vínculo de login quando o admin informar um e-mail.
-      // Assim, ao editar cargo/telefone/status, não apagamos o usuario_id já existente.
-      if (emailLogin) {
-        payloadTecnico.usuario_email = emailLogin;
-        payloadTecnico.usuario_id = usuarioIdVinculado;
-      } else if (!id) {
-        payloadTecnico.usuario_email = null;
-        payloadTecnico.usuario_id = null;
-      }
 
       let error;
 
@@ -3317,22 +3387,9 @@
       const { data: apr } = await supabaseClient.from("aprs").select("*").eq("id", id).single();
       const { data: tecs } = await supabaseClient.from("apr_tecnicos").select("*").eq("apr_id", id);
       const { data: respostas } = await supabaseClient.from("apr_checklist_respostas").select("*").eq("apr_id", id).order("ordem");
-      const { data: fotos } = await supabaseClient.from("apr_fotos").select("*").eq("apr_id", id).order("enviada_em", { ascending: true });
-
       if (!apr) return;
 
-      const fotosComUrl = [];
-      for (const foto of (fotos || [])) {
-        const { data: signed } = await supabaseClient
-          .storage
-          .from("apr-arquivos")
-          .createSignedUrl(foto.storage_path, 60 * 60);
-
-        fotosComUrl.push({
-          ...foto,
-          signed_url: signed?.signedUrl || ""
-        });
-      }
+      const fotosComUrl = await buscarFotosComUrlApr(id);
 
       const tecsComAssinatura = [];
       for (const t of (tecs || [])) {
@@ -3386,20 +3443,8 @@
 
         <div class="form-section">
           <h4>Fotos de comprovação</h4>
-          ${fotosComUrl.length ? `
-            <div class="foto-grid">
-              ${fotosComUrl.map(f => `
-                <div class="foto-card">
-                  <img src="${f.signed_url}" alt="Foto de comprovação da APR">
-                  <div class="foto-card-body">
-                    <strong>${escapeHtml(f.arquivo_nome || "Foto")}</strong>
-                    <span class="small">${formatBytes(f.tamanho_bytes)}</span>
-                    <span class="small">Enviada em: ${formatarData(f.enviada_em)}</span>
-                  </div>
-                </div>
-              `).join("")}
-            </div>
-          ` : `<p>Nenhuma foto vinculada a esta APR.</p>`}
+          <p class="small">Clique em uma foto ou no botão “Ver foto” para ampliar.</p>
+          ${htmlFotosApr(fotosComUrl)}
         </div>
 
         <div class="form-section">
@@ -3419,6 +3464,80 @@
 
     function fecharModalApr() {
       document.getElementById("modalDetalhesApr").classList.add("hidden");
+    }
+
+    function abrirVisualizadorFoto(url, titulo) {
+      const modal = document.getElementById("modalVisualizadorFoto");
+      const img = document.getElementById("imgVisualizadorFoto");
+      const title = document.getElementById("tituloVisualizadorFoto");
+      const link = document.getElementById("linkAbrirFotoNovaAba");
+
+      if (!modal || !img) return;
+
+      img.src = url || "";
+      if (title) title.textContent = titulo || "Foto da APR";
+      if (link) link.href = url || "#";
+
+      modal.classList.remove("hidden");
+    }
+
+    function fecharVisualizadorFoto() {
+      const modal = document.getElementById("modalVisualizadorFoto");
+      const img = document.getElementById("imgVisualizadorFoto");
+      if (img) img.src = "";
+      if (modal) modal.classList.add("hidden");
+    }
+
+    async function buscarFotosComUrlApr(aprId) {
+      const { data: fotos } = await supabaseClient
+        .from("apr_fotos")
+        .select("*")
+        .eq("apr_id", aprId)
+        .order("enviada_em", { ascending: true });
+
+      const fotosComUrl = [];
+
+      for (const foto of (fotos || [])) {
+        const { data: signed } = await supabaseClient
+          .storage
+          .from("apr-arquivos")
+          .createSignedUrl(foto.storage_path, 60 * 60);
+
+        fotosComUrl.push({
+          ...foto,
+          signed_url: signed?.signedUrl || ""
+        });
+      }
+
+      return fotosComUrl;
+    }
+
+    function htmlFotosApr(fotosComUrl, modoCompacto = false) {
+      if (!fotosComUrl.length) {
+        return `<p class="foto-empty">Nenhuma foto vinculada a esta APR.</p>`;
+      }
+
+      return `
+        <div class="foto-grid">
+          ${fotosComUrl.map((f, idx) => {
+            const titulo = f.arquivo_nome || `Foto ${idx + 1}`;
+            const urlJs = JSON.stringify(f.signed_url || "");
+            const tituloJs = JSON.stringify(titulo);
+
+            return `
+              <div class="foto-card">
+                <img class="foto-clickable" src="${f.signed_url}" alt="Foto de comprovação da APR" onclick='abrirVisualizadorFoto(${urlJs}, ${tituloJs})'>
+                <div class="foto-card-body">
+                  <strong>${escapeHtml(titulo)}</strong>
+                  ${modoCompacto ? "" : `<span class="small">${formatBytes(f.tamanho_bytes)}</span>`}
+                  ${modoCompacto ? "" : `<span class="small">Enviada em: ${formatarData(f.enviada_em)}</span>`}
+                  <button type="button" class="btn btn-light btn-mini foto-abrir-link" onclick='abrirVisualizadorFoto(${urlJs}, ${tituloJs})'>Ver foto</button>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
     }
 
     async function baixarAprPdf(aprId) {
@@ -3839,6 +3958,8 @@
         return;
       }
 
+      const fotosComUrl = await buscarFotosComUrlApr(aprId);
+
       assinaturaAprAtual = { apr, vinculo };
 
       document.getElementById("assinaturaAprInfo").innerHTML = `
@@ -3847,6 +3968,12 @@
         <p><strong>OS:</strong> ${escapeHtml(apr.numero_os || '-')}</p>
         <p><strong>Cliente:</strong> ${escapeHtml(apr.cliente_nome || '-')}</p>
         <p><strong>Atividade:</strong> ${escapeHtml(apr.descricao_atividade || '-')}</p>
+
+        <div class="assinatura-fotos-box">
+          <h4 style="margin-top:0;">Fotos da APR</h4>
+          <p class="small">Confira as fotos antes de assinar. Clique para ampliar.</p>
+          ${htmlFotosApr(fotosComUrl, true)}
+        </div>
       `;
 
       const check = document.getElementById("checkDeclaracaoAssinatura");
@@ -4198,18 +4325,10 @@
         nome,
         cargo,
         telefone,
-        ativo
+        ativo,
+        usuario_email: emailLogin || null,
+        usuario_id: usuarioIdVinculado
       };
-
-      // Só altera o vínculo de login quando o admin informar um e-mail.
-      // Assim, ao editar cargo/telefone/status, não apagamos o usuario_id já existente.
-      if (emailLogin) {
-        payloadTecnico.usuario_email = emailLogin;
-        payloadTecnico.usuario_id = usuarioIdVinculado;
-      } else if (!id) {
-        payloadTecnico.usuario_email = null;
-        payloadTecnico.usuario_id = null;
-      }
 
       let error;
 
