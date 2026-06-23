@@ -1,4 +1,4 @@
-const CACHE_NAME = "apr-digital-viatec-v12";
+const CACHE_NAME = "apr-digital-viatec-v13";
 
 const APP_SHELL = [
   "./",
@@ -9,10 +9,14 @@ const APP_SHELL = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(APP_SHELL).catch(() => {
-        return Promise.resolve();
-      });
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const file of APP_SHELL) {
+        try {
+          await cache.add(file);
+        } catch (e) {
+          console.warn("Falha ao cachear:", file, e);
+        }
+      }
     })
   );
 
@@ -37,7 +41,7 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // Não cachear chamadas do Supabase
+  // Não tentar cachear Supabase
   if (
     url.hostname.includes("supabase.co") ||
     url.hostname.includes("supabase.com")
@@ -46,7 +50,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Navegação principal: se estiver offline, volta para index.html
+  // Para navegação/página principal:
+  // tenta internet; se falhar, entrega index.html do cache.
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
@@ -54,15 +59,26 @@ self.addEventListener("fetch", (event) => {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put("./index.html", clone);
+            cache.put("./", clone.clone());
           });
           return response;
         })
-        .catch(() => caches.match("./index.html"))
+        .catch(async () => {
+          const cache = await caches.open(CACHE_NAME);
+          return (
+            (await cache.match("./index.html")) ||
+            (await cache.match("./")) ||
+            new Response("APR offline não encontrado no cache. Abra o sistema uma vez com internet.", {
+              status: 503,
+              headers: { "Content-Type": "text/plain; charset=utf-8" }
+            })
+          );
+        })
     );
     return;
   }
 
-  // Cache first para arquivos estáticos
+  // Para arquivos estáticos: cache first
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -71,7 +87,7 @@ self.addEventListener("fetch", (event) => {
 
       return fetch(request)
         .then((response) => {
-          if (!response || response.status !== 200 || response.type !== "basic") {
+          if (!response || response.status !== 200) {
             return response;
           }
 
@@ -83,7 +99,10 @@ self.addEventListener("fetch", (event) => {
 
           return response;
         })
-        .catch(() => caches.match("./index.html"));
+        .catch(async () => {
+          const cache = await caches.open(CACHE_NAME);
+          return await cache.match("./index.html");
+        });
     })
   );
 });
