@@ -5177,7 +5177,13 @@
     async function confirmarAssinaturaApr() {
       clearMsg("assinaturaMsg");
 
-      if (!assinaturaAprAtual?.apr || !assinaturaAprAtual?.vinculo) {
+      // Assinatura online usa assinaturaAprAtual.apr.
+      // Assinatura offline usa assinaturaAprAtual.item.
+      // Portanto, não pode exigir .apr quando for assinatura offline.
+      const assinaturaOnlineCarregada = !!assinaturaAprAtual?.apr && !!assinaturaAprAtual?.vinculo;
+      const assinaturaOfflineCarregada = !!assinaturaAprAtual?.offline && !!assinaturaAprAtual?.item && !!assinaturaAprAtual?.vinculo;
+
+      if (!assinaturaOnlineCarregada && !assinaturaOfflineCarregada) {
         setMsg("assinaturaMsg", "err", "Nenhuma APR carregada para assinatura.");
         return;
       }
