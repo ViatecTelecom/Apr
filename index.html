@@ -2006,6 +2006,10 @@
     let tecnicosCache = [];
     let checklistModeloCache = [];
     let aprsCache = [];
+    let modoOfflineAutenticado = false;
+
+    const OFFLINE_AUTH_CACHE_KEY = "aprOfflineAuthCacheV1";
+    const OFFLINE_DADOS_CACHE_KEY = "aprOfflineDadosCacheV1";
 
     let checklistIndex = 0;
     let checklistAnswers = {};
@@ -2116,16 +2120,99 @@
       return map[tipo] || "-";
     }
 
-    async function verificarSessao() {
-      const { data } = await supabaseClient.auth.getSession();
-
-      if (data.session?.user) {
-        usuarioAtual = data.session.user;
-        await carregarPerfil();
-        mostrarApp();
-      } else {
-        mostrarLogin();
+    function salvarCacheOfflineAuth() {
+      try {
+        if (!usuarioAtual || !perfilAtual) return;
+        localStorage.setItem(OFFLINE_AUTH_CACHE_KEY, JSON.stringify({
+          usuario: {
+            id: usuarioAtual.id,
+            email: usuarioAtual.email
+          },
+          perfil: perfilAtual,
+          salvo_em: new Date().toISOString()
+        }));
+      } catch (err) {
+        console.warn("Não foi possível salvar cache offline do usuário:", err);
       }
+    }
+
+    function carregarCacheOfflineAuth() {
+      try {
+        return JSON.parse(localStorage.getItem(OFFLINE_AUTH_CACHE_KEY) || "null");
+      } catch (err) {
+        localStorage.removeItem(OFFLINE_AUTH_CACHE_KEY);
+        return null;
+      }
+    }
+
+    function salvarCacheOfflineDados() {
+      try {
+        localStorage.setItem(OFFLINE_DADOS_CACHE_KEY, JSON.stringify({
+          tecnicos: tecnicosCache || [],
+          checklist: checklistModeloCache || [],
+          salvo_em: new Date().toISOString()
+        }));
+      } catch (err) {
+        console.warn("Não foi possível salvar dados offline:", err);
+      }
+    }
+
+    function carregarCacheOfflineDados() {
+      try {
+        return JSON.parse(localStorage.getItem(OFFLINE_DADOS_CACHE_KEY) || "null");
+      } catch (err) {
+        localStorage.removeItem(OFFLINE_DADOS_CACHE_KEY);
+        return null;
+      }
+    }
+
+    async function entrarModoOffline(emailDigitado = "") {
+      const cacheAuth = carregarCacheOfflineAuth();
+      const cacheDados = carregarCacheOfflineDados();
+
+      if (!cacheAuth?.usuario || !cacheAuth?.perfil) {
+        setMsg("loginMsg", "err", "Este aparelho ainda não tem sessão offline salva. Entre uma vez com internet antes de usar offline.");
+        return false;
+      }
+
+      if (emailDigitado && String(cacheAuth.usuario.email || "").toLowerCase() !== String(emailDigitado).toLowerCase()) {
+        setMsg("loginMsg", "err", "Modo offline disponível apenas para o último usuário que entrou neste aparelho: " + (cacheAuth.usuario.email || ""));
+        return false;
+      }
+
+      usuarioAtual = cacheAuth.usuario;
+      perfilAtual = cacheAuth.perfil;
+      tecnicosCache = cacheDados?.tecnicos || [];
+      checklistModeloCache = cacheDados?.checklist || [];
+      aprsCache = [];
+      modoOfflineAutenticado = true;
+
+      await mostrarApp();
+      atualizarStatusOffline();
+      return true;
+    }
+
+    async function verificarSessao() {
+      try {
+        const { data } = await supabaseClient.auth.getSession();
+
+        if (data.session?.user) {
+          usuarioAtual = data.session.user;
+          await carregarPerfil();
+          salvarCacheOfflineAuth();
+          mostrarApp();
+          return;
+        }
+      } catch (err) {
+        console.warn("Não foi possível verificar sessão online:", err);
+      }
+
+      if (!navigator.onLine) {
+        const entrou = await entrarModoOffline();
+        if (entrou) return;
+      }
+
+      mostrarLogin();
     }
 
     async function login() {
@@ -2139,10 +2226,28 @@
         return;
       }
 
-      const { data, error } = await supabaseClient.auth.signInWithPassword({
-        email,
-        password: senha
-      });
+      if (!navigator.onLine) {
+        const loginSalvo = JSON.parse(localStorage.getItem("aprLoginSalvo") || "null");
+        if (!loginSalvo || loginSalvo.email !== email || loginSalvo.senha !== senha) {
+          setMsg("loginMsg", "err", "Sem internet. Para entrar offline, este aparelho precisa ter acessado com internet antes e a opção 'Salvar e-mail e senha neste dispositivo' precisa estar marcada.");
+          return;
+        }
+        await entrarModoOffline(email);
+        return;
+      }
+
+      let data, error;
+      try {
+        const res = await supabaseClient.auth.signInWithPassword({
+          email,
+          password: senha
+        });
+        data = res.data;
+        error = res.error;
+      } catch (err) {
+        setMsg("loginMsg", "err", "Erro ao entrar: " + (err.message || "falha de conexão"));
+        return;
+      }
 
       if (error) {
         setMsg("loginMsg", "err", "Erro ao entrar: " + error.message);
@@ -2151,31 +2256,46 @@
 
       salvarLoginLocal(email, senha);
       usuarioAtual = data.user;
+      modoOfflineAutenticado = false;
       await carregarPerfil();
+      salvarCacheOfflineAuth();
       mostrarApp();
     }
 
     async function logout() {
-      await supabaseClient.auth.signOut();
+      if (navigator.onLine) {
+        await supabaseClient.auth.signOut();
+      }
       usuarioAtual = null;
       perfilAtual = null;
+      modoOfflineAutenticado = false;
       mostrarLogin();
     }
 
     async function carregarPerfil() {
-      const { data, error } = await supabaseClient
-        .from("perfis")
-        .select("*")
-        .eq("id", usuarioAtual.id)
-        .single();
+      try {
+        const { data, error } = await supabaseClient
+          .from("perfis")
+          .select("*")
+          .eq("id", usuarioAtual.id)
+          .single();
 
-      if (error || !data) {
+        if (error || !data) throw error || new Error("Perfil não encontrado");
+
+        perfilAtual = data;
+        salvarCacheOfflineAuth();
+        return;
+      } catch (err) {
+        const cacheAuth = carregarCacheOfflineAuth();
+        if (cacheAuth?.perfil && cacheAuth?.usuario?.id === usuarioAtual?.id) {
+          perfilAtual = cacheAuth.perfil;
+          modoOfflineAutenticado = true;
+          return;
+        }
+
         perfilAtual = null;
         alert("Usuário autenticado, mas sem perfil cadastrado na tabela perfis.");
-        return;
       }
-
-      perfilAtual = data;
     }
 
     function mostrarLogin() {
@@ -2206,28 +2326,47 @@
     async function carregarDadosIniciais() {
       await carregarTecnicos();
       await carregarChecklistModelo();
-      await carregarAprs();
-      await atualizarDashboard();
+
+      if (navigator.onLine && !modoOfflineAutenticado) {
+        await carregarAprs();
+        await atualizarDashboard();
+      } else {
+        aprsCache = [];
+        renderAprs([]);
+      }
+
+      salvarCacheOfflineDados();
     }
 
     async function atualizarDashboard() {
-      const { count: totalAprs } = await supabaseClient
-        .from("aprs")
-        .select("*", { count: "exact", head: true });
+      if (!navigator.onLine || modoOfflineAutenticado) {
+        document.getElementById("metricTotalAprs").textContent = "-";
+        document.getElementById("metricAguardando").textContent = "-";
+        document.getElementById("metricTecnicos").textContent = (tecnicosCache || []).filter(t => t.ativo).length || "-";
+        return;
+      }
 
-      const { count: aguardando } = await supabaseClient
-        .from("aprs")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "aguardando_assinaturas");
+      try {
+        const { count: totalAprs } = await supabaseClient
+          .from("aprs")
+          .select("*", { count: "exact", head: true });
 
-      const { count: tecnicos } = await supabaseClient
-        .from("tecnicos")
-        .select("*", { count: "exact", head: true })
-        .eq("ativo", true);
+        const { count: aguardando } = await supabaseClient
+          .from("aprs")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "aguardando_assinaturas");
 
-      document.getElementById("metricTotalAprs").textContent = totalAprs || 0;
-      document.getElementById("metricAguardando").textContent = aguardando || 0;
-      document.getElementById("metricTecnicos").textContent = tecnicos || 0;
+        const { count: tecnicos } = await supabaseClient
+          .from("tecnicos")
+          .select("*", { count: "exact", head: true })
+          .eq("ativo", true);
+
+        document.getElementById("metricTotalAprs").textContent = totalAprs || 0;
+        document.getElementById("metricAguardando").textContent = aguardando || 0;
+        document.getElementById("metricTecnicos").textContent = tecnicos || 0;
+      } catch (err) {
+        console.warn("Dashboard offline/sem conexão:", err);
+      }
     }
 
     function toggleMenu() {
@@ -2298,17 +2437,32 @@
     }
 
     async function carregarTecnicos() {
-      const { data, error } = await supabaseClient
-        .from("tecnicos")
-        .select("*")
-        .order("nome", { ascending: true });
-
-      if (error) {
-        console.error(error);
+      if (!navigator.onLine || modoOfflineAutenticado) {
+        const cacheDados = carregarCacheOfflineDados();
+        tecnicosCache = cacheDados?.tecnicos || tecnicosCache || [];
+        renderTabelaTecnicos();
+        renderTecnicosNovaApr();
+        renderFiltroTecnicoHistorico();
+        await atualizarDashboard();
         return;
       }
 
-      tecnicosCache = data || [];
+      try {
+        const { data, error } = await supabaseClient
+          .from("tecnicos")
+          .select("*")
+          .order("nome", { ascending: true });
+
+        if (error) throw error;
+
+        tecnicosCache = data || [];
+        salvarCacheOfflineDados();
+      } catch (err) {
+        console.error(err);
+        const cacheDados = carregarCacheOfflineDados();
+        if (cacheDados?.tecnicos) tecnicosCache = cacheDados.tecnicos;
+      }
+
       renderTabelaTecnicos();
       renderTecnicosNovaApr();
       renderFiltroTecnicoHistorico();
@@ -2670,17 +2824,31 @@
     }
 
     async function carregarChecklistModelo() {
-      const { data, error } = await supabaseClient
-        .from("apr_checklist_modelo")
-        .select("*")
-        .order("ordem", { ascending: true });
-
-      if (error) {
-        console.error(error);
+      if (!navigator.onLine || modoOfflineAutenticado) {
+        const cacheDados = carregarCacheOfflineDados();
+        checklistModeloCache = cacheDados?.checklist || checklistModeloCache || [];
+        atualizarDatalistGrupos();
+        renderWizard();
+        renderRegras();
         return;
       }
 
-      checklistModeloCache = data || [];
+      try {
+        const { data, error } = await supabaseClient
+          .from("apr_checklist_modelo")
+          .select("*")
+          .order("ordem", { ascending: true });
+
+        if (error) throw error;
+
+        checklistModeloCache = data || [];
+        salvarCacheOfflineDados();
+      } catch (err) {
+        console.error(err);
+        const cacheDados = carregarCacheOfflineDados();
+        if (cacheDados?.checklist) checklistModeloCache = cacheDados.checklist;
+      }
+
       atualizarDatalistGrupos();
       renderWizard();
       renderRegras();
@@ -3758,6 +3926,11 @@
       const tbody = document.getElementById("tbodyAprs");
       if (tbody) tbody.innerHTML = `<tr><td colspan="7">Carregando...</td></tr>`;
 
+      if (!navigator.onLine || modoOfflineAutenticado) {
+        renderAprs([]);
+        return;
+      }
+
       const filtroOs = document.getElementById("filtroOs")?.value.trim();
       const filtroCliente = document.getElementById("filtroCliente")?.value.trim();
       const filtroStatus = document.getElementById("filtroStatus")?.value;
@@ -4491,6 +4664,11 @@
 
 
     async function carregarMinhasAssinaturas() {
+      if (!navigator.onLine || modoOfflineAutenticado) {
+        const boxOffline = document.getElementById("minhasAssinaturasLista");
+        if (boxOffline) boxOffline.innerHTML = `<div class="foto-empty">Offline: suas APRs vinculadas serão atualizadas quando a internet voltar. Para criar APR offline, use a aba Nova APR.</div>`;
+        return;
+      }
       const box = document.getElementById("listaMinhasAssinaturas");
       if (!box) return;
 
