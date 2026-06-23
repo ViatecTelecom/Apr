@@ -1304,6 +1304,77 @@
       }
     }
 
+
+    .offline-status {
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-weight: 800;
+      font-size: 13px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .offline-status.online {
+      background: #ecfdf3;
+      color: #027a48;
+      border-color: #abefc6;
+    }
+
+    .offline-status.offline {
+      background: #fffaeb;
+      color: #b54708;
+      border-color: #fedf89;
+    }
+
+    .offline-status.syncing {
+      background: #eff8ff;
+      color: #175cd3;
+      border-color: #b2ddff;
+    }
+
+    .nav-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.22);
+      margin-left: 6px;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .offline-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 12px;
+      background: #fff;
+    }
+
+    .offline-card h4 {
+      margin: 0 0 6px;
+    }
+
+    .offline-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0 12px;
+    }
+
+    .offline-meta span {
+      background: #f2f4f7;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
   </style>
 </head>
 
@@ -1372,6 +1443,7 @@
           <button id="navNovaApr" onclick="showTab('novaApr')">Nova APR</button>
           <button id="navHistorico" onclick="showTab('historico')">Histórico de APRs</button>
           <button id="navMinhasAssinaturas" onclick="showTab('minhasAssinaturas')">Minhas assinaturas</button>
+          <button id="navOffline" onclick="showTab('offline')">Pendentes offline <span id="offlineNavCount" class="nav-count">0</span></button>
           <button id="navTecnicos" onclick="showTab('tecnicos')">Técnicos</button>
           <button id="navRegras" onclick="showTab('regras')">Regras da APR</button>
           <button onclick="logout()">Sair</button>
@@ -1379,6 +1451,7 @@
       </aside>
 
       <main class="main">
+        <div id="offlineStatusBar" class="offline-status online">Online</div>
         <section id="tabDashboard">
           <div class="topbar">
             <div>
@@ -1618,7 +1691,21 @@
           </div>
         </section>
 
+        <section id="tabOffline" class="hidden">
+          <div class="topbar">
+            <div>
+              <h2>APRs offline / Pendentes de envio</h2>
+              <p>APRs criadas sem internet ficam salvas neste aparelho e podem ser enviadas quando a conexão voltar.</p>
+            </div>
+            <button class="btn btn-green" onclick="sincronizarTodasOffline()">Sincronizar agora</button>
+          </div>
 
+          <div class="card">
+            <div id="offlineListaAprs">
+              <p>Carregando pendências...</p>
+            </div>
+          </div>
+        </section>
 
         <section id="tabMinhasAssinaturas" class="hidden">
           <div class="topbar">
@@ -1931,7 +2018,10 @@
 
     document.addEventListener("DOMContentLoaded", async () => {
       carregarLoginSalvo();
+      inicializarOfflinePwa();
       await verificarSessao();
+      atualizarStatusOffline();
+      atualizarContadorOffline();
     });
 
     function carregarLoginSalvo() {
@@ -2106,6 +2196,8 @@
       document.getElementById("navTecnicos").style.display = isAdmin ? "block" : "none";
       document.getElementById("navRegras").style.display = isAdmin ? "block" : "none";
       document.getElementById("navMinhasAssinaturas").style.display = isAdmin ? "none" : "block";
+      document.getElementById("navOffline").style.display = "block";
+      atualizarContadorOffline();
 
       await carregarDadosIniciais();
       showTab(isAdmin ? "dashboard" : "novaApr");
@@ -2143,7 +2235,7 @@
     }
 
     function showTab(tab) {
-      const tabs = ["Dashboard", "NovaApr", "Historico", "Tecnicos", "Regras", "MinhasAssinaturas"];
+      const tabs = ["Dashboard", "NovaApr", "Historico", "Tecnicos", "Regras", "MinhasAssinaturas", "Offline"];
       tabs.forEach(t => document.getElementById("tab" + t).classList.add("hidden"));
       document.querySelectorAll(".nav button").forEach(btn => btn.classList.remove("active"));
 
@@ -2183,6 +2275,12 @@
         document.getElementById("tabMinhasAssinaturas").classList.remove("hidden");
         document.getElementById("navMinhasAssinaturas").classList.add("active");
         carregarMinhasAssinaturas();
+      }
+
+      if (tab === "offline") {
+        document.getElementById("tabOffline").classList.remove("hidden");
+        document.getElementById("navOffline").classList.add("active");
+        renderAprsOffline();
       }
 
       if (tab === "regras") {
@@ -3025,8 +3123,419 @@
     }
 
 
+    const OFFLINE_DB_NAME = "apr_digital_viatec_offline_v1";
+    const OFFLINE_DB_VERSION = 1;
+    const OFFLINE_STORE_APRS = "aprs_pendentes";
+
+    function inicializarOfflinePwa() {
+      if ("serviceWorker" in navigator && window.location.protocol === "https:") {
+        navigator.serviceWorker.register("sw.js").catch(err => console.warn("Service Worker não registrado:", err));
+      }
+
+      window.addEventListener("online", () => {
+        atualizarStatusOffline();
+        atualizarContadorOffline();
+      });
+
+      window.addEventListener("offline", () => {
+        atualizarStatusOffline();
+        atualizarContadorOffline();
+      });
+    }
+
+    function atualizarStatusOffline(extra = "") {
+      const el = document.getElementById("offlineStatusBar");
+      if (!el) return;
+
+      if (extra === "syncing") {
+        el.className = "offline-status syncing";
+        el.textContent = "Sincronizando APRs offline...";
+        return;
+      }
+
+      if (navigator.onLine) {
+        el.className = "offline-status online";
+        el.textContent = "Online - APRs serão salvas diretamente no Supabase.";
+      } else {
+        el.className = "offline-status offline";
+        el.textContent = "Offline - APRs serão salvas neste aparelho e enviadas quando a internet voltar.";
+      }
+    }
+
+    function abrirDbOffline() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(OFFLINE_DB_NAME, OFFLINE_DB_VERSION);
+        req.onupgradeneeded = event => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(OFFLINE_STORE_APRS)) {
+            const store = db.createObjectStore(OFFLINE_STORE_APRS, { keyPath: "offline_id" });
+            store.createIndex("criada_em", "criada_em", { unique: false });
+            store.createIndex("status_sync", "status_sync", { unique: false });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function dbOfflinePut(item) {
+      const db = await abrirDbOffline();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(OFFLINE_STORE_APRS, "readwrite");
+        tx.objectStore(OFFLINE_STORE_APRS).put(item);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function dbOfflineGetAll() {
+      const db = await abrirDbOffline();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(OFFLINE_STORE_APRS, "readonly");
+        const req = tx.objectStore(OFFLINE_STORE_APRS).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function dbOfflineDelete(offlineId) {
+      const db = await abrirDbOffline();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(OFFLINE_STORE_APRS, "readwrite");
+        tx.objectStore(OFFLINE_STORE_APRS).delete(offlineId);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function atualizarContadorOffline() {
+      try {
+        const lista = await dbOfflineGetAll();
+        const qtd = lista.filter(i => i.status_sync !== "sincronizado").length;
+        const badge = document.getElementById("offlineNavCount");
+        if (badge) badge.textContent = qtd;
+      } catch (err) {
+        console.warn("Erro ao contar APRs offline:", err);
+      }
+    }
+
+    async function renderAprsOffline() {
+      const box = document.getElementById("offlineListaAprs");
+      if (!box) return;
+
+      let lista = [];
+      try {
+        lista = await dbOfflineGetAll();
+      } catch (err) {
+        box.innerHTML = `<p class="danger-text">Erro ao carregar pendências offline: ${escapeHtml(err.message || String(err))}</p>`;
+        return;
+      }
+
+      lista = lista.sort((a, b) => String(b.criada_em).localeCompare(String(a.criada_em)));
+
+      if (!lista.length) {
+        box.innerHTML = `
+          <div class="foto-empty">
+            Nenhuma APR offline pendente neste aparelho.
+          </div>
+        `;
+        atualizarContadorOffline();
+        return;
+      }
+
+      box.innerHTML = lista.map(item => {
+        const d = item.dados || {};
+        const fotos = item.fotos?.length || 0;
+        const tecs = item.tecnicos?.length || 0;
+        const status = item.status_sync === "erro" ? `<span class="badge cancelada">Erro</span>` : `<span class="badge aguardando_assinaturas">Pendente</span>`;
+        return `
+          <div class="offline-card">
+            <h4>${escapeHtml(d.cliente_nome || "Cliente não informado")}</h4>
+            <p class="small"><strong>OS/Protocolo:</strong> ${escapeHtml(d.numero_os || d.protocolo_os || "-")}</p>
+            <div class="offline-meta">
+              <span>${status}</span>
+              <span>${formatarData(item.criada_em)}</span>
+              <span>${tecs} técnico(s)</span>
+              <span>${fotos} foto(s)</span>
+            </div>
+            ${item.erro_sync ? `<p class="danger-text">Último erro: ${escapeHtml(item.erro_sync)}</p>` : ""}
+            <div class="row-actions">
+              <button class="btn btn-primary btn-mini" onclick="sincronizarAprOffline('${item.offline_id}')" ${navigator.onLine ? "" : "disabled"}>Enviar agora</button>
+              <button class="btn btn-danger btn-mini" onclick="excluirAprOffline('${item.offline_id}')">Excluir pendência</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      atualizarContadorOffline();
+    }
+
+    async function excluirAprOffline(offlineId) {
+      if (!confirm("Excluir esta APR offline deste aparelho? Ela não será enviada ao Supabase.")) return;
+      await dbOfflineDelete(offlineId);
+      await renderAprsOffline();
+      await atualizarContadorOffline();
+    }
+
+    async function coletarAprOfflineParaSalvar() {
+      // Reaproveita as mesmas validações principais da APR online.
+      const numero_os = document.getElementById("aprNumeroOs").value.trim();
+      const protocolo_os = document.getElementById("aprProtocolo").value.trim();
+      const codigo_cliente = document.getElementById("aprCodigoCliente").value.trim();
+      const cliente_nome = document.getElementById("aprClienteNome").value.trim();
+      const cidade_bairro = document.getElementById("aprCidadeBairro").value.trim();
+      const cliente_endereco = document.getElementById("aprEndereco").value.trim();
+      const tipo_servico = document.getElementById("aprTipoServico").value;
+      const tipo_servico_outros = document.getElementById("aprTipoServicoOutros").value.trim();
+      const descricao_atividade = document.getElementById("aprDescricao").value.trim();
+      const observacoes_adicionais = document.getElementById("aprObservacoes").value.trim();
+
+      const tecnicoLogado = getTecnicoLogado();
+      if (perfilAtual?.perfil !== "admin") {
+        if (!tecnicoLogado) throw new Error("Seu usuário está como técnico, mas não está vinculado a um cadastro ativo em Técnicos.");
+        tecnicosSelecionadosApr.add(tecnicoLogado.id);
+      }
+
+      const tecnicosSelecionados = getTecnicosSelecionados();
+      if (tecnicoLogado && !tecnicosSelecionados.some(t => t.id === tecnicoLogado.id)) {
+        tecnicosSelecionados.unshift(tecnicoLogado);
+      }
+
+      const respostas = getRespostasChecklist();
+
+      if (!numero_os && !protocolo_os) throw new Error("Informe o Nº da OS ou o protocolo.");
+      if (!cliente_nome) throw new Error("Informe o nome do cliente.");
+      if (!cidade_bairro) throw new Error("Informe cidade/bairro.");
+      if (!tipo_servico) throw new Error("Selecione o tipo de serviço.");
+      if (tipo_servico === "outros" && !tipo_servico_outros) throw new Error("Descreva o tipo de serviço em Outros.");
+      if (!descricao_atividade) throw new Error("Informe a descrição da atividade.");
+      if (!tecnicosSelecionados.length) throw new Error("Selecione pelo menos um técnico envolvido.");
+
+      const incompletas = respostas.filter(r => !r.resposta);
+      if (incompletas.length > 0) throw new Error("Responda todo o questionário da APR.");
+
+      const obsObrigatorias = respostas.filter(r => r.resposta === "N" && r.modelo.exige_observacao_se_nao && !r.observacao);
+      if (obsObrigatorias.length > 0) throw new Error("Existe resposta Não com observação obrigatória. Volte na pergunta e preencha.");
+
+      const tecnicoResponsavel = tecnicoLogado || tecnicosSelecionados[0];
+      const agora = new Date().toISOString();
+
+      return {
+        offline_id: crypto.randomUUID(),
+        criada_em: agora,
+        status_sync: "pendente",
+        usuario: usuarioAtual ? { id: usuarioAtual.id, email: usuarioAtual.email } : null,
+        perfil: perfilAtual ? { id: perfilAtual.id, nome: perfilAtual.nome, perfil: perfilAtual.perfil } : null,
+        tecnico_responsavel_id: tecnicoResponsavel.id,
+        dados: {
+          numero_os,
+          protocolo_os,
+          codigo_cliente,
+          cliente_nome,
+          cliente_endereco,
+          cidade_bairro,
+          tipo_servico,
+          tipo_servico_outros,
+          descricao_atividade,
+          observacoes_adicionais,
+          status: "aguardando_assinaturas",
+          tecnico_responsavel_id: tecnicoResponsavel.id,
+          criada_por: usuarioAtual?.id || null,
+          emitida_em: agora,
+          atualizado_em: agora
+        },
+        tecnicos: tecnicosSelecionados.map(t => ({
+          id: t.id,
+          usuario_id: t.usuario_id || null,
+          nome: t.nome,
+          cargo: t.cargo || "Técnico",
+          responsavel: t.id === tecnicoResponsavel.id
+        })),
+        respostas: respostas.map(r => ({
+          checklist_modelo_id: r.modelo.id,
+          ordem: r.modelo.ordem,
+          grupo: r.modelo.grupo,
+          pergunta: r.modelo.pergunta,
+          resposta: r.resposta,
+          observacao: r.observacao,
+          respondido_por: usuarioAtual?.id || null,
+          respondido_em: agora,
+          bloqueou_finalizacao: r.resposta === "N" && !!r.modelo.bloqueia_finalizacao_se_nao
+        })),
+        fotos: fotosPendentesApr.map(f => ({
+          blob: f.blob,
+          nome_original: f.nome_original,
+          mime_type: f.mime_type || "image/webp",
+          tamanho_original_bytes: f.tamanho_original_bytes,
+          tamanho_comprimido_bytes: f.tamanho_comprimido_bytes,
+          largura: f.largura,
+          altura: f.altura
+        }))
+      };
+    }
+
+    async function salvarAprOffline() {
+      clearMsg("novaAprMsg");
+
+      if (aprEditandoId) {
+        setMsg("novaAprMsg", "err", "Edição offline de APR já existente ainda não está disponível. Conecte à internet para editar.");
+        return;
+      }
+
+      try {
+        const item = await coletarAprOfflineParaSalvar();
+        await dbOfflinePut(item);
+
+        fotosPendentesApr.forEach(f => { if (f.preview_url) URL.revokeObjectURL(f.preview_url); });
+        limparFormularioApr();
+        setMsg("novaAprMsg", "ok", "APR salva offline neste aparelho. Quando a internet voltar, acesse Pendentes offline e sincronize.");
+        await atualizarContadorOffline();
+        await renderAprsOffline();
+      } catch (err) {
+        setMsg("novaAprMsg", "err", err.message || String(err));
+      }
+    }
+
+    async function sincronizarTodasOffline() {
+      if (!navigator.onLine) {
+        alert("Sem internet. Conecte-se para sincronizar as APRs pendentes.");
+        return;
+      }
+
+      const lista = await dbOfflineGetAll();
+      if (!lista.length) {
+        alert("Não há APRs offline pendentes.");
+        return;
+      }
+
+      atualizarStatusOffline("syncing");
+      for (const item of lista) {
+        await sincronizarItemOffline(item);
+      }
+      atualizarStatusOffline();
+      await renderAprsOffline();
+      await carregarAprs();
+      await atualizarDashboard();
+    }
+
+    async function sincronizarAprOffline(offlineId) {
+      if (!navigator.onLine) {
+        alert("Sem internet. Conecte-se para sincronizar.");
+        return;
+      }
+      const lista = await dbOfflineGetAll();
+      const item = lista.find(i => i.offline_id === offlineId);
+      if (!item) return;
+
+      atualizarStatusOffline("syncing");
+      await sincronizarItemOffline(item);
+      atualizarStatusOffline();
+      await renderAprsOffline();
+      await carregarAprs();
+      await atualizarDashboard();
+    }
+
+    async function sincronizarItemOffline(item) {
+      try {
+        const payloadApr = { ...(item.dados || {}) };
+        payloadApr.atualizado_em = new Date().toISOString();
+
+        const { data: aprCriada, error: aprError } = await supabaseClient
+          .from("aprs")
+          .insert(payloadApr)
+          .select()
+          .single();
+
+        if (aprError) throw aprError;
+
+        const aprId = aprCriada.id;
+        const aprNumero = aprCriada.numero_apr || "";
+
+        const tecnicosInsert = (item.tecnicos || []).map(t => ({
+          apr_id: aprId,
+          tecnico_id: t.id,
+          usuario_id: t.usuario_id || null,
+          nome_tecnico: t.nome,
+          cargo: t.cargo || "Técnico",
+          responsavel: !!t.responsavel,
+          assinatura_pendente: true,
+          assinado: false,
+          texto_declaracao: "Declaro que li e estou ciente da APR, dos riscos da atividade e das medidas de segurança informadas antes do início do serviço."
+        }));
+
+        if (tecnicosInsert.length) {
+          const { error } = await supabaseClient.from("apr_tecnicos").insert(tecnicosInsert);
+          if (error) throw error;
+        }
+
+        const respostasInsert = (item.respostas || []).map(r => ({
+          apr_id: aprId,
+          ...r
+        }));
+
+        if (respostasInsert.length) {
+          const { error } = await supabaseClient.from("apr_checklist_respostas").insert(respostasInsert);
+          if (error) throw error;
+        }
+
+        for (let i = 0; i < (item.fotos || []).length; i++) {
+          const foto = item.fotos[i];
+          const ano = new Date().getFullYear();
+          const mes = String(new Date().getMonth() + 1).padStart(2, "0");
+          const nomeSeguro = `${Date.now()}-${i + 1}.webp`;
+          const path = `fotos/${ano}/${mes}/${aprNumero || aprId}/${nomeSeguro}`;
+
+          const { error: uploadError } = await supabaseClient.storage.from("apr-arquivos").upload(path, foto.blob, {
+            contentType: "image/webp",
+            upsert: false
+          });
+          if (uploadError) throw uploadError;
+
+          const { error: dbError } = await supabaseClient.from("apr_fotos").insert({
+            apr_id: aprId,
+            enviado_por: item.usuario?.id || usuarioAtual?.id || null,
+            tipo_foto: "comprovacao_apr",
+            descricao: "Foto de comprovação da APR enviada após criação offline",
+            storage_path: path,
+            arquivo_nome: nomeSeguro,
+            mime_type: "image/webp",
+            tamanho_bytes: foto.tamanho_comprimido_bytes,
+            largura: foto.largura,
+            altura: foto.altura,
+            tamanho_original_bytes: foto.tamanho_original_bytes,
+            tamanho_comprimido_bytes: foto.tamanho_comprimido_bytes
+          });
+          if (dbError) throw dbError;
+        }
+
+        await supabaseClient.from("apr_linha_tempo").insert({
+          apr_id: aprId,
+          usuario_id: item.usuario?.id || usuarioAtual?.id || null,
+          acao: "APR criada offline",
+          detalhes: `APR criada offline no aparelho e sincronizada depois para OS ${payloadApr.numero_os || payloadApr.protocolo_os || "-"}.`,
+          dados: { offline_id: item.offline_id, tecnicos: (item.tecnicos || []).map(t => t.nome) }
+        });
+
+        await dbOfflineDelete(item.offline_id);
+        return true;
+      } catch (err) {
+        item.status_sync = "erro";
+        item.erro_sync = err.message || String(err);
+        item.ultima_tentativa_sync = new Date().toISOString();
+        await dbOfflinePut(item);
+        console.error("Erro ao sincronizar APR offline:", err);
+        return false;
+      }
+    }
+
+
     async function salvarApr() {
       clearMsg("novaAprMsg");
+
+      if (!navigator.onLine) {
+        await salvarAprOffline();
+        return;
+      }
 
       const numero_os = document.getElementById("aprNumeroOs").value.trim();
       const protocolo_os = document.getElementById("aprProtocolo").value.trim();
@@ -3808,6 +4317,77 @@
       textarea {
         font-size: 16px;
       }
+    }
+
+
+    .offline-status {
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-weight: 800;
+      font-size: 13px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .offline-status.online {
+      background: #ecfdf3;
+      color: #027a48;
+      border-color: #abefc6;
+    }
+
+    .offline-status.offline {
+      background: #fffaeb;
+      color: #b54708;
+      border-color: #fedf89;
+    }
+
+    .offline-status.syncing {
+      background: #eff8ff;
+      color: #175cd3;
+      border-color: #b2ddff;
+    }
+
+    .nav-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.22);
+      margin-left: 6px;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .offline-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 12px;
+      background: #fff;
+    }
+
+    .offline-card h4 {
+      margin: 0 0 6px;
+    }
+
+    .offline-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0 12px;
+    }
+
+    .offline-meta span {
+      background: #f2f4f7;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
     }
 
   </style>
