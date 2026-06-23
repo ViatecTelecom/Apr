@@ -2204,9 +2204,13 @@
           return;
         }
       } catch (err) {
-        console.warn("Não foi possível verificar sessão online:", err);
+        console.warn("Não foi possível verificar sessão online. Tentando sessão offline:", err);
+        const entrou = await entrarModoOffline();
+        if (entrou) return;
       }
 
+      // Não depender somente de navigator.onLine, pois em alguns celulares/navegadores
+      // ele pode indicar online mesmo sem acesso real ao Supabase.
       if (!navigator.onLine) {
         const entrou = await entrarModoOffline();
         if (entrou) return;
@@ -2227,12 +2231,12 @@
       }
 
       if (!navigator.onLine) {
-        const loginSalvo = JSON.parse(localStorage.getItem("aprLoginSalvo") || "null");
-        if (!loginSalvo || loginSalvo.email !== email || loginSalvo.senha !== senha) {
-          setMsg("loginMsg", "err", "Sem internet. Para entrar offline, este aparelho precisa ter acessado com internet antes e a opção 'Salvar e-mail e senha neste dispositivo' precisa estar marcada.");
-          return;
+        // Login offline não deve depender da senha salva.
+        // Basta o aparelho já ter feito login online uma vez e ter salvo o cache do perfil/dados.
+        const entrouOffline = await entrarModoOffline(email);
+        if (!entrouOffline) {
+          setMsg("loginMsg", "err", "Sem internet. Para entrar offline, este aparelho precisa ter acessado com internet pelo menos uma vez com este usuário.");
         }
-        await entrarModoOffline(email);
         return;
       }
 
@@ -2245,7 +2249,11 @@
         data = res.data;
         error = res.error;
       } catch (err) {
-        setMsg("loginMsg", "err", "Erro ao entrar: " + (err.message || "falha de conexão"));
+        console.warn("Falha no login online. Tentando login offline:", err);
+        const entrouOffline = await entrarModoOffline(email);
+        if (!entrouOffline) {
+          setMsg("loginMsg", "err", "Sem conexão com o Supabase e este aparelho ainda não tem sessão offline salva para este usuário. Entre uma vez com internet e depois tente offline novamente.");
+        }
         return;
       }
 
