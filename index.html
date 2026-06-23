@@ -3441,16 +3441,38 @@
       box.innerHTML = lista.map(item => {
         const d = item.dados || {};
         const fotos = item.fotos?.length || 0;
-        const tecs = item.tecnicos?.length || 0;
-        const assinados = (item.tecnicos || []).filter(t => !!t.assinatura_offline || !!t.assinado).length;
+        const tecnicosItem = item.tecnicos || [];
+        const tecs = tecnicosItem.length || 0;
+        const assinados = tecnicosItem.filter(t => !!t.assinatura_offline || !!t.assinado).length;
         const todosAssinados = tecs > 0 && assinados === tecs;
-        const meuVinculoOffline = getMeuVinculoOffline(item);
-        const possoAssinarOffline = !!meuVinculoOffline && !meuVinculoOffline.assinatura_offline && !meuVinculoOffline.assinado;
         const status = item.status_sync === "erro"
           ? `<span class="badge cancelada">Erro</span>`
           : todosAssinados
             ? `<span class="badge finalizada">Assinado offline</span>`
             : `<span class="badge aguardando_assinaturas">Pendente</span>`;
+
+        const htmlAssinaturasTecnicos = tecnicosItem.length ? `
+          <div style="margin-top:12px; display:grid; gap:8px;">
+            ${tecnicosItem.map((tec, idx) => {
+              const assinado = !!tec.assinatura_offline || !!tec.assinado;
+              const quando = tec.assinatura_offline?.assinado_em || tec.assinado_em;
+              return `
+                <div style="border:1px solid #e5e7eb; border-radius:14px; padding:10px; background:#f9fafb;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                    <div>
+                      <strong>${escapeHtml(tec.nome || tec.nome_tecnico || `Técnico ${idx + 1}`)}</strong><br>
+                      ${assinado
+                        ? `<span class="badge finalizada">Assinado</span> <span class="small">${formatarData(quando)}</span>`
+                        : `<span class="badge aguardando_assinaturas">Pendente</span>`}
+                    </div>
+                    ${!assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinaturaOffline('${item.offline_id}', ${idx})">Assinar ${escapeHtml(tec.nome || tec.nome_tecnico || '')}</button>` : ""}
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        ` : `<p class="small">Nenhum técnico vinculado nesta pendência.</p>`;
+
         return `
           <div class="offline-card">
             <h4>${escapeHtml(d.cliente_nome || "Cliente não informado")}</h4>
@@ -3462,10 +3484,10 @@
               <span>${assinados}/${tecs} assinatura(s)</span>
               <span>${fotos} foto(s)</span>
             </div>
-            ${meuVinculoOffline?.assinatura_offline ? `<p class="small"><strong>Sua assinatura:</strong> registrada offline em ${formatarData(meuVinculoOffline.assinatura_offline.assinado_em)}</p>` : ""}
+            <p class="small"><strong>Assinaturas offline:</strong> use os botões abaixo para cada técnico assinar neste mesmo aparelho.</p>
+            ${htmlAssinaturasTecnicos}
             ${item.erro_sync ? `<p class="danger-text">Último erro: ${escapeHtml(item.erro_sync)}</p>` : ""}
-            <div class="row-actions">
-              ${possoAssinarOffline ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinaturaOffline('${item.offline_id}')">Assinar offline</button>` : ""}
+            <div class="row-actions" style="margin-top:12px;">
               <button class="btn btn-primary btn-mini" onclick="sincronizarAprOffline('${item.offline_id}')" ${navigator.onLine ? "" : "disabled"}>Enviar agora</button>
               <button class="btn btn-danger btn-mini" onclick="excluirAprOffline('${item.offline_id}')">Excluir pendência</button>
             </div>
@@ -4843,7 +4865,7 @@
       abrirModalAssinatura(aprId);
     }
 
-    async function abrirModalAssinaturaOffline(offlineId) {
+    async function abrirModalAssinaturaOffline(offlineId, tecnicoIndex = null) {
       clearMsg("assinaturaMsg");
 
       const lista = await dbOfflineGetAll();
@@ -4853,24 +4875,27 @@
         return;
       }
 
-      const vinculo = getMeuVinculoOffline(item);
+      const tecnicosItem = item.tecnicos || [];
+      let idxSelecionado = Number.isInteger(tecnicoIndex) ? tecnicoIndex : -1;
+      let vinculo = idxSelecionado >= 0 ? tecnicosItem[idxSelecionado] : getMeuVinculoOffline(item);
+
       if (!vinculo) {
-        alert("Esta APR offline não está vinculada ao seu usuário para assinatura.");
+        alert("Selecione um técnico válido para assinar esta APR offline.");
         return;
       }
 
       if (vinculo.assinatura_offline || vinculo.assinado) {
-        alert("Você já assinou esta APR offline.");
+        alert("Este técnico já assinou esta APR offline.");
         return;
       }
 
       const d = item.dados || {};
       const fotosComUrl = getFotosOfflineComUrl(item);
-      assinaturaAprAtual = { offline: true, item, vinculo };
+      assinaturaAprAtual = { offline: true, item, vinculo, tecnicoIndex: idxSelecionado };
 
       document.getElementById("assinaturaAprInfo").innerHTML = `
         <h4>APR offline pendente</h4>
-        <p><strong>Técnico:</strong> ${escapeHtml(vinculo.nome || perfilAtual?.nome || "-")}</p>
+        <p><strong>Técnico que está assinando:</strong> ${escapeHtml(vinculo.nome || vinculo.nome_tecnico || perfilAtual?.nome || "-")}</p>
         <p><strong>OS:</strong> ${escapeHtml(d.numero_os || d.protocolo_os || "-")}</p>
         <p><strong>Cliente:</strong> ${escapeHtml(d.cliente_nome || "-")}</p>
         <p><strong>Atividade:</strong> ${escapeHtml(d.descricao_atividade || "-")}</p>
@@ -5130,10 +5155,13 @@
       }
 
       const agoraIso = new Date().toISOString();
-      const idx = (item.tecnicos || []).findIndex(t =>
-        (vinculo.id && t.id === vinculo.id) ||
-        (vinculo.usuario_id && t.usuario_id === vinculo.usuario_id)
-      );
+      let idx = Number.isInteger(assinaturaAprAtual?.tecnicoIndex) ? assinaturaAprAtual.tecnicoIndex : -1;
+      if (idx < 0) {
+        idx = (item.tecnicos || []).findIndex(t =>
+          (vinculo.id && t.id === vinculo.id) ||
+          (vinculo.usuario_id && t.usuario_id === vinculo.usuario_id)
+        );
+      }
 
       if (idx < 0) {
         setMsg("assinaturaMsg", "err", "Técnico não encontrado na APR offline.");
