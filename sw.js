@@ -1,4 +1,4 @@
-const CACHE_NAME = "apr-digital-viatec-v16";
+const CACHE_NAME = "apr-digital-viatec-v17";
 
 const APP_SHELL = [
   "/Apr/",
@@ -42,7 +42,7 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // Nunca cachear chamadas reais do Supabase/API.
+  // Não cachear chamadas reais do Supabase/API
   if (
     url.hostname.includes("supabase.co") ||
     url.hostname.includes("supabase.com")
@@ -51,37 +51,53 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Navegação principal: abre index offline.
+  // Página principal: cache primeiro.
+  // Isso ajuda principalmente no celular ao atualizar a página sem internet.
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const clone = response.clone();
+      caches.open(CACHE_NAME).then(async (cache) => {
+        const cachedIndex =
+          (await cache.match("/Apr/index.html")) ||
+          (await cache.match("/Apr/"));
 
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put("/Apr/", clone.clone());
-            cache.put("/Apr/index.html", clone);
-          });
+        // Se tiver index no cache, entrega ele imediatamente.
+        // Depois, se tiver internet, tenta atualizar o cache em segundo plano.
+        if (cachedIndex) {
+          fetch(request)
+            .then((response) => {
+              if (response && response.status === 200) {
+                cache.put("/Apr/", response.clone());
+                cache.put("/Apr/index.html", response.clone());
+              }
+            })
+            .catch(() => {});
 
+          return cachedIndex;
+        }
+
+        // Se ainda não tiver cache, tenta internet.
+        try {
+          const response = await fetch(request);
+          if (response && response.status === 200) {
+            await cache.put("/Apr/", response.clone());
+            await cache.put("/Apr/index.html", response.clone());
+          }
           return response;
-        })
-        .catch(async () => {
-          const cache = await caches.open(CACHE_NAME);
-
-          return (
-            (await cache.match("/Apr/index.html")) ||
-            (await cache.match("/Apr/")) ||
-            new Response("APR offline não encontrado no cache. Abra o sistema uma vez com internet.", {
+        } catch (e) {
+          return new Response(
+            "APR offline não encontrado no cache. Abra o sistema uma vez com internet.",
+            {
               status: 503,
               headers: { "Content-Type": "text/plain; charset=utf-8" }
-            })
+            }
           );
-        })
+        }
+      })
     );
     return;
   }
 
-  // Arquivos estáticos e bibliotecas: cache first.
+  // Arquivos estáticos e biblioteca do Supabase: cache first
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
