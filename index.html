@@ -3395,6 +3395,25 @@
       }
     }
 
+    function getMeuVinculoOffline(item) {
+      const tecnicos = item?.tecnicos || [];
+      const tecnicoLogado = getTecnicoLogado();
+      return tecnicos.find(t =>
+        (usuarioAtual?.id && t.usuario_id === usuarioAtual.id) ||
+        (tecnicoLogado?.id && t.id === tecnicoLogado.id)
+      ) || null;
+    }
+
+    function getFotosOfflineComUrl(item) {
+      return (item?.fotos || []).map((f, idx) => ({
+        ...f,
+        arquivo_nome: f.nome_original || `Foto offline ${idx + 1}`,
+        tamanho_bytes: f.tamanho_comprimido_bytes || f.tamanho_original_bytes || 0,
+        enviada_em: item.criada_em,
+        signed_url: f.blob ? URL.createObjectURL(f.blob) : ""
+      }));
+    }
+
     async function renderAprsOffline() {
       const box = document.getElementById("offlineListaAprs");
       if (!box) return;
@@ -3423,7 +3442,15 @@
         const d = item.dados || {};
         const fotos = item.fotos?.length || 0;
         const tecs = item.tecnicos?.length || 0;
-        const status = item.status_sync === "erro" ? `<span class="badge cancelada">Erro</span>` : `<span class="badge aguardando_assinaturas">Pendente</span>`;
+        const assinados = (item.tecnicos || []).filter(t => !!t.assinatura_offline || !!t.assinado).length;
+        const todosAssinados = tecs > 0 && assinados === tecs;
+        const meuVinculoOffline = getMeuVinculoOffline(item);
+        const possoAssinarOffline = !!meuVinculoOffline && !meuVinculoOffline.assinatura_offline && !meuVinculoOffline.assinado;
+        const status = item.status_sync === "erro"
+          ? `<span class="badge cancelada">Erro</span>`
+          : todosAssinados
+            ? `<span class="badge finalizada">Assinado offline</span>`
+            : `<span class="badge aguardando_assinaturas">Pendente</span>`;
         return `
           <div class="offline-card">
             <h4>${escapeHtml(d.cliente_nome || "Cliente não informado")}</h4>
@@ -3432,10 +3459,13 @@
               <span>${status}</span>
               <span>${formatarData(item.criada_em)}</span>
               <span>${tecs} técnico(s)</span>
+              <span>${assinados}/${tecs} assinatura(s)</span>
               <span>${fotos} foto(s)</span>
             </div>
+            ${meuVinculoOffline?.assinatura_offline ? `<p class="small"><strong>Sua assinatura:</strong> registrada offline em ${formatarData(meuVinculoOffline.assinatura_offline.assinado_em)}</p>` : ""}
             ${item.erro_sync ? `<p class="danger-text">Último erro: ${escapeHtml(item.erro_sync)}</p>` : ""}
             <div class="row-actions">
+              ${possoAssinarOffline ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinaturaOffline('${item.offline_id}')">Assinar offline</button>` : ""}
               <button class="btn btn-primary btn-mini" onclick="sincronizarAprOffline('${item.offline_id}')" ${navigator.onLine ? "" : "disabled"}>Enviar agora</button>
               <button class="btn btn-danger btn-mini" onclick="excluirAprOffline('${item.offline_id}')">Excluir pendência</button>
             </div>
@@ -3627,17 +3657,50 @@
         const aprId = aprCriada.id;
         const aprNumero = aprCriada.numero_apr || "";
 
-        const tecnicosInsert = (item.tecnicos || []).map(t => ({
-          apr_id: aprId,
-          tecnico_id: t.id,
-          usuario_id: t.usuario_id || null,
-          nome_tecnico: t.nome,
-          cargo: t.cargo || "Técnico",
-          responsavel: !!t.responsavel,
-          assinatura_pendente: true,
-          assinado: false,
-          texto_declaracao: "Declaro que li e estou ciente da APR, dos riscos da atividade e das medidas de segurança informadas antes do início do serviço."
-        }));
+        for (let i = 0; i < (item.tecnicos || []).length; i++) {
+          const t = item.tecnicos[i];
+          const assinatura = t.assinatura_offline;
+          if (!assinatura?.blob) continue;
+
+          const dataAss = assinatura.assinado_em ? new Date(assinatura.assinado_em) : new Date();
+          const anoAss = dataAss.getFullYear();
+          const mesAss = String(dataAss.getMonth() + 1).padStart(2, "0");
+          const nomeArquivoAss = `${Date.now()}-${i + 1}-${t.usuario_id || t.id}.png`;
+          const pathAss = `assinaturas/${anoAss}/${mesAss}/${aprNumero || aprId}/${nomeArquivoAss}`;
+
+          const { error: uploadAssError } = await supabaseClient.storage.from("apr-arquivos").upload(pathAss, assinatura.blob, {
+            contentType: "image/png",
+            upsert: false
+          });
+          if (uploadAssError) throw uploadAssError;
+
+          t.assinatura_storage_path_sync = pathAss;
+        }
+
+        const tecnicosInsert = (item.tecnicos || []).map(t => {
+          const assinatura = t.assinatura_offline;
+          const assinado = !!assinatura || !!t.assinado;
+          return {
+            apr_id: aprId,
+            tecnico_id: t.id,
+            usuario_id: t.usuario_id || null,
+            nome_tecnico: t.nome,
+            cargo: t.cargo || "Técnico",
+            responsavel: !!t.responsavel,
+            assinatura_pendente: !assinado,
+            assinado,
+            assinatura_storage_path: t.assinatura_storage_path_sync || null,
+            assinatura_mime_type: assinatura ? "image/png" : null,
+            assinatura_hash: assinatura?.hash || null,
+            assinado_em: assinatura?.assinado_em || null,
+            assinatura_latitude: assinatura?.assinatura_latitude ?? null,
+            assinatura_longitude: assinatura?.assinatura_longitude ?? null,
+            assinatura_precisao_metros: assinatura?.assinatura_precisao_metros ?? null,
+            assinatura_localizacao_capturada_em: assinatura?.assinatura_localizacao_capturada_em || null,
+            user_agent_assinatura: assinatura?.user_agent_assinatura || null,
+            texto_declaracao: "Declaro que li e estou ciente da APR, dos riscos da atividade e das medidas de segurança informadas antes do início do serviço."
+          };
+        });
 
         if (tecnicosInsert.length) {
           const { error } = await supabaseClient.from("apr_tecnicos").insert(tecnicosInsert);
@@ -3691,6 +3754,26 @@
           detalhes: `APR criada offline no aparelho e sincronizada depois para OS ${payloadApr.numero_os || payloadApr.protocolo_os || "-"}.`,
           dados: { offline_id: item.offline_id, tecnicos: (item.tecnicos || []).map(t => t.nome) }
         });
+
+        const assinaturasOffline = (item.tecnicos || []).filter(t => !!t.assinatura_offline);
+        for (const t of assinaturasOffline) {
+          await supabaseClient.from("apr_linha_tempo").insert({
+            apr_id: aprId,
+            usuario_id: t.usuario_id || item.usuario?.id || usuarioAtual?.id || null,
+            acao: "APR assinada offline",
+            detalhes: `APR assinada offline por ${t.nome || "técnico"} e sincronizada depois.`,
+            dados: {
+              assinatura_hash: t.assinatura_offline.hash,
+              assinatura_storage_path: t.assinatura_storage_path_sync || null,
+              localizacao: {
+                latitude: t.assinatura_offline.assinatura_latitude,
+                longitude: t.assinatura_offline.assinatura_longitude,
+                precisao_metros: t.assinatura_offline.assinatura_precisao_metros,
+                capturada_em: t.assinatura_offline.assinatura_localizacao_capturada_em
+              }
+            }
+          });
+        }
 
         await dbOfflineDelete(item.offline_id);
         return true;
@@ -4673,7 +4756,7 @@
 
     async function carregarMinhasAssinaturas() {
       if (!navigator.onLine || modoOfflineAutenticado) {
-        const boxOffline = document.getElementById("minhasAssinaturasLista");
+        const boxOffline = document.getElementById("listaMinhasAssinaturas");
         if (boxOffline) boxOffline.innerHTML = `<div class="foto-empty">Offline: suas APRs vinculadas serão atualizadas quando a internet voltar. Para criar APR offline, use a aba Nova APR.</div>`;
         return;
       }
@@ -4758,6 +4841,54 @@
       }
 
       abrirModalAssinatura(aprId);
+    }
+
+    async function abrirModalAssinaturaOffline(offlineId) {
+      clearMsg("assinaturaMsg");
+
+      const lista = await dbOfflineGetAll();
+      const item = lista.find(i => i.offline_id === offlineId);
+      if (!item) {
+        alert("APR offline não encontrada neste aparelho.");
+        return;
+      }
+
+      const vinculo = getMeuVinculoOffline(item);
+      if (!vinculo) {
+        alert("Esta APR offline não está vinculada ao seu usuário para assinatura.");
+        return;
+      }
+
+      if (vinculo.assinatura_offline || vinculo.assinado) {
+        alert("Você já assinou esta APR offline.");
+        return;
+      }
+
+      const d = item.dados || {};
+      const fotosComUrl = getFotosOfflineComUrl(item);
+      assinaturaAprAtual = { offline: true, item, vinculo };
+
+      document.getElementById("assinaturaAprInfo").innerHTML = `
+        <h4>APR offline pendente</h4>
+        <p><strong>Técnico:</strong> ${escapeHtml(vinculo.nome || perfilAtual?.nome || "-")}</p>
+        <p><strong>OS:</strong> ${escapeHtml(d.numero_os || d.protocolo_os || "-")}</p>
+        <p><strong>Cliente:</strong> ${escapeHtml(d.cliente_nome || "-")}</p>
+        <p><strong>Atividade:</strong> ${escapeHtml(d.descricao_atividade || "-")}</p>
+        <p class="small"><strong>Localização:</strong> ao confirmar a assinatura, o navegador irá solicitar permissão para capturar a localização do técnico e registrar junto da APR offline.</p>
+        <p class="small"><strong>Importante:</strong> a assinatura ficará salva neste aparelho e será enviada ao Supabase quando a APR for sincronizada.</p>
+
+        <div class="assinatura-fotos-box">
+          <h4 style="margin-top:0;">Fotos da APR</h4>
+          <p class="small">Confira as fotos antes de assinar. Clique para ampliar.</p>
+          ${htmlFotosApr(fotosComUrl, true)}
+        </div>
+      `;
+
+      const check = document.getElementById("checkDeclaracaoAssinatura");
+      if (check) check.checked = false;
+
+      document.getElementById("modalAssinaturaApr").classList.remove("hidden");
+      setTimeout(inicializarCanvasAssinatura, 80);
     }
 
     async function abrirModalAssinatura(aprId) {
@@ -4990,6 +5121,59 @@
       });
     }
 
+    async function salvarAssinaturaOfflineNaPendencia(blob, hash, localizacao) {
+      const item = assinaturaAprAtual?.item;
+      const vinculo = assinaturaAprAtual?.vinculo;
+      if (!item || !vinculo) {
+        setMsg("assinaturaMsg", "err", "APR offline não carregada para assinatura.");
+        return;
+      }
+
+      const agoraIso = new Date().toISOString();
+      const idx = (item.tecnicos || []).findIndex(t =>
+        (vinculo.id && t.id === vinculo.id) ||
+        (vinculo.usuario_id && t.usuario_id === vinculo.usuario_id)
+      );
+
+      if (idx < 0) {
+        setMsg("assinaturaMsg", "err", "Técnico não encontrado na APR offline.");
+        return;
+      }
+
+      item.tecnicos[idx].assinatura_offline = {
+        blob,
+        mime_type: "image/png",
+        hash,
+        assinado_em: agoraIso,
+        assinatura_latitude: localizacao.latitude,
+        assinatura_longitude: localizacao.longitude,
+        assinatura_precisao_metros: localizacao.precisao,
+        assinatura_localizacao_capturada_em: localizacao.capturadaEm,
+        user_agent_assinatura: navigator.userAgent || null
+      };
+      item.tecnicos[idx].assinado = true;
+      item.tecnicos[idx].assinatura_pendente = false;
+
+      const todosAssinaram = (item.tecnicos || []).length > 0 && (item.tecnicos || []).every(t => !!t.assinatura_offline || !!t.assinado);
+      if (todosAssinaram && item.dados) {
+        item.dados.status = "assinado";
+      }
+
+      item.atualizada_em = agoraIso;
+      item.status_sync = "pendente";
+      delete item.erro_sync;
+
+      await dbOfflinePut(item);
+      setMsg("assinaturaMsg", "ok", "Assinatura offline registrada neste aparelho. Sincronize quando a internet voltar.");
+
+      setTimeout(async () => {
+        fecharModalAssinatura();
+        await renderAprsOffline();
+        await atualizarContadorOffline();
+        showTab("offline");
+      }, 900);
+    }
+
     async function confirmarAssinaturaApr() {
       clearMsg("assinaturaMsg");
 
@@ -5022,6 +5206,11 @@
       const canvas = document.getElementById("signatureCanvas");
       const blob = await canvasToBlob(canvas);
       const hash = await gerarHashBlob(blob);
+
+      if (assinaturaAprAtual?.offline) {
+        await salvarAssinaturaOfflineNaPendencia(blob, hash, localizacao);
+        return;
+      }
 
       const apr = assinaturaAprAtual.apr;
       const vinculo = assinaturaAprAtual.vinculo;
