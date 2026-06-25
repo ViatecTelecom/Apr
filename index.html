@@ -1695,7 +1695,7 @@
           <div class="topbar">
             <div>
               <h2>APRs offline / Pendentes de envio</h2>
-              <p>APRs criadas sem internet ficam salvas neste aparelho e podem ser enviadas quando a conexão voltar.</p>
+              <p>APRs criadas sem internet ficam salvas neste aparelho. Quando a conexão voltar, o sistema tenta enviar automaticamente; o botão abaixo fica como envio manual caso precise.</p>
             </div>
             <button class="btn btn-green" onclick="sincronizarTodasOffline()">Sincronizar agora</button>
           </div>
@@ -3303,6 +3303,9 @@
     const OFFLINE_DB_VERSION = 1;
     const OFFLINE_STORE_APRS = "aprs_pendentes";
 
+    let sincronizacaoAutomaticaEmAndamento = false;
+    let ultimaTentativaSyncAutomatica = 0;
+
     function inicializarOfflinePwa() {
       if ("serviceWorker" in navigator && window.location.protocol === "https:") {
         navigator.serviceWorker.register("sw.js").catch(err => console.warn("Service Worker não registrado:", err));
@@ -3311,12 +3314,25 @@
       window.addEventListener("online", () => {
         atualizarStatusOffline();
         atualizarContadorOffline();
+        tentarSincronizacaoAutomaticaOffline("internet voltou");
       });
 
       window.addEventListener("offline", () => {
         atualizarStatusOffline();
         atualizarContadorOffline();
       });
+
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && navigator.onLine) {
+          tentarSincronizacaoAutomaticaOffline("app voltou para tela");
+        }
+      });
+
+      setInterval(() => {
+        if (navigator.onLine) {
+          tentarSincronizacaoAutomaticaOffline("verificacao periodica");
+        }
+      }, 60000);
     }
 
     function atualizarStatusOffline(extra = "") {
@@ -3393,6 +3409,83 @@
       } catch (err) {
         console.warn("Erro ao contar APRs offline:", err);
       }
+    }
+
+    async function tentarSincronizacaoAutomaticaOffline(origem = "automatico") {
+      if (!navigator.onLine) return;
+      if (sincronizacaoAutomaticaEmAndamento) return;
+
+      // Evita várias tentativas seguidas quando o celular oscila sinal.
+      const agoraMs = Date.now();
+      if (agoraMs - ultimaTentativaSyncAutomatica < 15000) return;
+      ultimaTentativaSyncAutomatica = agoraMs;
+
+      try {
+        const lista = await dbOfflineGetAll();
+        const pendentes = lista.filter(item => item.status_sync !== "sincronizado");
+        if (!pendentes.length) {
+          await atualizarContadorOffline();
+          return;
+        }
+
+        sincronizacaoAutomaticaEmAndamento = true;
+        atualizarStatusOffline("syncing");
+        console.log(`Sincronização automática iniciada (${origem}). Pendências:`, pendentes.length);
+
+        let enviados = 0;
+        for (const item of pendentes) {
+          const ok = await sincronizarItemOffline(item);
+          if (ok) enviados++;
+        }
+
+        atualizarStatusOffline();
+        await atualizarContadorOffline();
+        await renderAprsOffline();
+
+        if (typeof carregarAprs === "function") {
+          try { await carregarAprs(); } catch (e) { console.warn("Falha ao recarregar APRs após sync automático:", e); }
+        }
+        if (typeof atualizarDashboard === "function") {
+          try { await atualizarDashboard(); } catch (e) { console.warn("Falha ao atualizar dashboard após sync automático:", e); }
+        }
+
+        if (enviados > 0) {
+          mostrarAvisoSincronizacaoAutomatica(`${enviados} APR(s) offline enviada(s) automaticamente.`);
+        }
+      } catch (err) {
+        console.warn("Falha na sincronização automática offline:", err);
+      } finally {
+        sincronizacaoAutomaticaEmAndamento = false;
+        atualizarStatusOffline();
+      }
+    }
+
+    function mostrarAvisoSincronizacaoAutomatica(texto) {
+      let aviso = document.getElementById("avisoSyncAutoOffline");
+      if (!aviso) {
+        aviso = document.createElement("div");
+        aviso.id = "avisoSyncAutoOffline";
+        aviso.style.position = "fixed";
+        aviso.style.left = "16px";
+        aviso.style.right = "16px";
+        aviso.style.bottom = "16px";
+        aviso.style.zIndex = "9999";
+        aviso.style.padding = "14px 16px";
+        aviso.style.borderRadius = "16px";
+        aviso.style.background = "#ecfdf5";
+        aviso.style.border = "1px solid #86efac";
+        aviso.style.color = "#166534";
+        aviso.style.fontWeight = "800";
+        aviso.style.boxShadow = "0 16px 36px rgba(15, 23, 42, .18)";
+        document.body.appendChild(aviso);
+      }
+
+      aviso.textContent = texto;
+      aviso.style.display = "block";
+      clearTimeout(window.__timerAvisoSyncAutoOffline);
+      window.__timerAvisoSyncAutoOffline = setTimeout(() => {
+        aviso.style.display = "none";
+      }, 5500);
     }
 
     function getMeuVinculoOffline(item) {
@@ -3616,7 +3709,7 @@
 
         fotosPendentesApr.forEach(f => { if (f.preview_url) URL.revokeObjectURL(f.preview_url); });
         limparFormularioApr();
-        setMsg("novaAprMsg", "ok", "APR salva offline neste aparelho. Quando a internet voltar, acesse Pendentes offline e sincronize.");
+        setMsg("novaAprMsg", "ok", "APR salva offline neste aparelho. Quando a internet voltar, o sistema tentará sincronizar automaticamente. Você também pode usar Pendentes offline > Enviar agora.");
         await atualizarContadorOffline();
         await renderAprsOffline();
       } catch (err) {
