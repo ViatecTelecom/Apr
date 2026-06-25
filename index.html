@@ -4528,13 +4528,13 @@
                   <br>${htmlAsoTecnico(t)}
                   ${t.assinatura_url ? `
                     <br><span class="small"><strong>Assinatura:</strong></span><br>
-                    <img class="assinatura-img foto-clickable" src="${t.assinatura_url}" alt="Assinatura de ${escapeHtml(t.nome_tecnico)}" onclick="abrirVisualizadorAssinaturaApr('${apr.id}', ${idx}, 'assinatura')">
-                    <br><button class="btn btn-light btn-mini" type="button" onclick="abrirVisualizadorAssinaturaApr('${apr.id}', ${idx}, 'assinatura')">Ver assinatura</button>
+                    <img class="assinatura-img foto-clickable" src="${t.assinatura_url}" alt="Assinatura de ${escapeHtml(t.nome_tecnico)}" onclick='abrirVisualizadorFoto(${JSON.stringify(t.assinatura_url || "")}, ${JSON.stringify("Assinatura - " + (t.nome_tecnico || "Técnico"))})'>
+                    <br><button class="btn btn-light btn-mini" type="button" onclick='abrirVisualizadorFoto(${JSON.stringify(t.assinatura_url || "")}, ${JSON.stringify("Assinatura - " + (t.nome_tecnico || "Técnico"))})'>Ver assinatura</button>
                   ` : ""}
                   ${t.selfie_url ? `
                     <br><span class="small"><strong>Selfie da assinatura:</strong></span><br>
-                    <img class="assinatura-img foto-clickable" src="${t.selfie_url}" alt="Selfie de ${escapeHtml(t.nome_tecnico)}" onclick="abrirVisualizadorAssinaturaApr('${apr.id}', ${idx}, 'selfie')">
-                    <br><button class="btn btn-light btn-mini" type="button" onclick="abrirVisualizadorAssinaturaApr('${apr.id}', ${idx}, 'selfie')">Ver selfie</button>
+                    <img class="assinatura-img foto-clickable" src="${t.selfie_url}" alt="Selfie de ${escapeHtml(t.nome_tecnico)}" onclick='abrirVisualizadorFoto(${JSON.stringify(t.selfie_url || "")}, ${JSON.stringify("Selfie - " + (t.nome_tecnico || "Técnico"))})'>
+                    <br><button class="btn btn-light btn-mini" type="button" onclick='abrirVisualizadorFoto(${JSON.stringify(t.selfie_url || "")}, ${JSON.stringify("Selfie - " + (t.nome_tecnico || "Técnico"))})'>Ver selfie</button>
                   ` : (t.assinado ? `<br><span class="small"><strong>Selfie:</strong> não registrada</span>` : "")}
                 </div>
                 <div class="row-actions">
@@ -4586,10 +4586,10 @@
     }
 
     function abrirVisualizadorAssinaturaApr(aprId, indice, tipo) {
-      const lista = detalhesAssinaturaCache?.[aprId] || [];
-      const tecnico = lista[indice];
+      const lista = detalhesAssinaturaCache?.[aprId] || detalhesAssinaturaCache?.[String(aprId)] || [];
+      const tecnico = lista[Number(indice)];
       if (!tecnico) {
-        alert("Não encontrei essa assinatura na APR. Feche e abra a APR novamente.");
+        alert("Não encontrei essa assinatura/selfie na APR. Feche e abra a APR novamente.");
         return;
       }
 
@@ -4670,391 +4670,195 @@
         return;
       }
 
-      const { data: apr, error: aprError } = await supabaseClient.from("aprs").select("*").eq("id", aprId).single();
-      if (aprError || !apr) {
-        alert("Erro ao carregar APR para download.");
-        return;
-      }
-
-      const { data: tecs } = await supabaseClient.from("apr_tecnicos").select("*").eq("apr_id", aprId).order("nome_tecnico");
-      const mapaTecnicosCadastro = new Map((tecnicosCache || []).map(t => [t.id, t]));
-      const { data: respostas } = await supabaseClient.from("apr_checklist_respostas").select("*").eq("apr_id", aprId).order("ordem");
-      const { data: fotos } = await supabaseClient.from("apr_fotos").select("*").eq("apr_id", aprId).order("enviada_em", { ascending: true });
-
-      const fotosComUrl = [];
-      for (const foto of (fotos || [])) {
-        const { data: signed } = await supabaseClient
-          .storage
-          .from("apr-arquivos")
-          .createSignedUrl(foto.storage_path, 60 * 60);
-
-        fotosComUrl.push({ ...foto, signed_url: signed?.signedUrl || "" });
-      }
-
-      const tecsComAssinatura = [];
-      for (const t of (tecs || [])) {
-        let assinatura_url = "";
-        let selfie_url = "";
-
-        if (t.assinatura_storage_path) {
-          const { data: signedAss } = await supabaseClient
-            .storage
-            .from("apr-arquivos")
-            .createSignedUrl(t.assinatura_storage_path, 60 * 60);
-          assinatura_url = signedAss?.signedUrl || "";
-        }
-
-        if (t.assinatura_selfie_storage_path) {
-          const { data: signedSelfie } = await supabaseClient
-            .storage
-            .from("apr-arquivos")
-            .createSignedUrl(t.assinatura_selfie_storage_path, 60 * 60);
-          selfie_url = signedSelfie?.signedUrl || "";
-        }
-
-        const cadastroTec = t.tecnico_id ? mapaTecnicosCadastro.get(t.tecnico_id) : null;
-        tecsComAssinatura.push({
-          ...t,
-          ...cadastroTec,
-          nome_tecnico: t.nome_tecnico,
-          assinatura_url,
-          selfie_url
-        });
-      }
-
-      const nomeArquivo = `APR-${apr.numero_apr || apr.numero_os || apr.id}`.replaceAll("/", "-").replaceAll(" ", "-");
-
-      const html = `
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-          <meta charset="UTF-8">
-          <title>${escapeHtml(nomeArquivo)}</title>
-          <style>
-            body { font-family: Arial, Helvetica, sans-serif; color: #1d2939; margin: 24px; }
-            .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0057a8; padding-bottom: 12px; margin-bottom: 18px; }
-            .brand { font-size: 24px; font-weight: 900; color: #0057a8; }
-            h1 { font-size: 22px; margin: 0 0 6px; color: #003b73; }
-            h2 { font-size: 16px; color: #003b73; border-bottom: 1px solid #d0d5dd; padding-bottom: 5px; margin-top: 22px; }
-            p { margin: 5px 0; font-size: 12px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
-            th, td { border: 1px solid #d0d5dd; padding: 6px; text-align: left; vertical-align: top; }
-            th { background: #f2f4f7; }
-            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-            .box { border: 1px solid #d0d5dd; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
-            .badge { display: inline-block; border-radius: 999px; padding: 3px 7px; font-weight: 700; font-size: 10px; border: 1px solid #d0d5dd; }
-            .ok { background: #ecfdf3; color: #027a48; border-color: #abefc6; }
-            .pend { background: #eff8ff; color: #175cd3; border-color: #b2ddff; }
-            .foto-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-            .foto { border: 1px solid #d0d5dd; border-radius: 8px; padding: 6px; page-break-inside: avoid; }
-            .foto img { width: 100%; max-height: 230px; object-fit: contain; }
-            .assinatura-img { max-width: 220px; max-height: 90px; border: 1px solid #d0d5dd; margin-top: 6px; object-fit: contain; background: #fff; }
-            .selfie-img { width: 86px; height: 86px; border: 1px solid #d0d5dd; border-radius: 10px; object-fit: cover; background: #fff; margin-top: 6px; display: block; }
-            .assinatura-cell { min-width: 170px; }
-            .selfie-label { font-size: 10px; font-weight: 700; color: #344054; margin-top: 8px; display: block; }
-            @media print { body { margin: 12mm; } button { display: none; } .page-break { page-break-before: always; } }
-        
-
-    /* Ajuste especial para celular: questionário mais compacto e fácil de usar */
-    .answer-btn.answer-disabled,
-    .answer-btn:disabled {
-      background: #f8fafc;
-      color: #98a2b3;
-      border-color: #e4e7ec;
-      box-shadow: none;
-      transform: none;
-    }
-
-    @media (max-width: 600px) {
-      .main {
-        padding: 12px;
-      }
-
-      .topbar {
-        margin-bottom: 14px;
-      }
-
-      .topbar h2 {
-        font-size: 22px;
-      }
-
-      .topbar p {
-        font-size: 13px;
-      }
-
-      .card {
-        padding: 13px;
-        border-radius: 16px;
-      }
-
-      .form-section {
-        padding: 12px;
-        border-radius: 14px;
-        margin-bottom: 12px;
-      }
-
-      .form-section h4 {
-        font-size: 16px;
-        margin-bottom: 8px;
-      }
-
-      .wizard-box {
-        padding: 14px;
-        border-radius: 18px;
-        box-shadow: none;
-      }
-
-      .wizard-progress {
-        height: 8px;
-        margin-bottom: 13px;
-      }
-
-      .wizard-header {
-        margin-bottom: 10px;
-      }
-
-      .wizard-title {
-        font-size: 12px;
-        margin-bottom: 6px;
-        letter-spacing: .02em;
-      }
-
-      .wizard-question {
-        font-size: 18px;
-        line-height: 1.25;
-        margin-bottom: 8px;
-      }
-
-      .answer-buttons {
-        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-        gap: 8px;
-        margin: 12px 0;
-      }
-
-      .answer-btn {
-        min-height: 58px;
-        padding: 10px 4px;
-        border-radius: 14px;
-        font-size: 14px;
-        line-height: 1.15;
-      }
-
-      .answer-btn.answer-disabled,
-      .answer-btn:disabled {
-        font-size: 12px;
-      }
-
-      .wizard-footer {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        margin-top: 10px;
-      }
-
-      .wizard-footer .btn {
-        width: 100%;
-        padding: 12px 10px;
-        border-radius: 13px;
-      }
-
-      .question-summary {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        gap: 6px;
-        padding: 2px 0 8px;
-        margin-top: 12px;
-        -webkit-overflow-scrolling: touch;
-      }
-
-      .question-summary::-webkit-scrollbar {
-        display: none;
-      }
-
-      .dot {
-        flex: 0 0 auto;
-        width: 30px;
-        height: 30px;
-        font-size: 12px;
-      }
-
-      input,
-      select,
-      textarea {
-        font-size: 16px;
-      }
-    }
-
-
-    .offline-status {
-      margin-bottom: 14px;
-      padding: 10px 14px;
-      border-radius: 14px;
-      font-weight: 800;
-      font-size: 13px;
-      border: 1px solid rgba(15, 23, 42, 0.08);
-      box-shadow: var(--shadow-soft);
-    }
-
-    .offline-status.online {
-      background: #ecfdf3;
-      color: #027a48;
-      border-color: #abefc6;
-    }
-
-    .offline-status.offline {
-      background: #fffaeb;
-      color: #b54708;
-      border-color: #fedf89;
-    }
-
-    .offline-status.syncing {
-      background: #eff8ff;
-      color: #175cd3;
-      border-color: #b2ddff;
-    }
-
-    .nav-count {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 20px;
-      height: 20px;
-      padding: 0 6px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.22);
-      margin-left: 6px;
-      font-size: 11px;
-      font-weight: 900;
-    }
-
-    .offline-card {
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 14px;
-      margin-bottom: 12px;
-      background: #fff;
-    }
-
-    .offline-card h4 {
-      margin: 0 0 6px;
-    }
-
-    .offline-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 8px 0 12px;
-    }
-
-    .offline-meta span {
-      background: #f2f4f7;
-      border-radius: 999px;
-      padding: 5px 9px;
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 700;
-    }
-
-  </style>
-        </head>
-        <body>
-          <div class="header">
-            <div>
-              <div class="brand">VIATEC</div>
-              <h1>PT - Permissão de Trabalho / APR - Análise Preliminar de Risco</h1>
-              <p>Documento gerado em ${formatarData(new Date().toISOString())}</p>
-            </div>
-            <div>
-              <p><strong>APR:</strong> ${escapeHtml(apr.numero_apr || "-")}</p>
-              <p><strong>Status:</strong> ${escapeHtml(labelStatus(apr.status))}</p>
-            </div>
-          </div>
-
-          <h2>Dados da OS / Cliente</h2>
-          <div class="grid">
-            <div class="box">
-              <p><strong>OS:</strong> ${escapeHtml(apr.numero_os || "-")}</p>
-              <p><strong>Protocolo:</strong> ${escapeHtml(apr.protocolo_os || "-")}</p>
-              <p><strong>Código do cliente:</strong> ${escapeHtml(apr.codigo_cliente || "-")}</p>
-              <p><strong>Cliente:</strong> ${escapeHtml(apr.cliente_nome || "-")}</p>
-            </div>
-            <div class="box">
-              <p><strong>Cidade/Bairro:</strong> ${escapeHtml(apr.cidade_bairro || "-")}</p>
-              <p><strong>Endereço:</strong> ${escapeHtml(apr.cliente_endereco || "-")}</p>
-              <p><strong>Serviço:</strong> ${escapeHtml(formatarTipoServico(apr.tipo_servico, apr.tipo_servico_outros))}</p>
-              <p><strong>Emitida em:</strong> ${formatarData(apr.emitida_em || apr.criada_em)}</p>
-            </div>
-          </div>
-
-          <h2>Descrição da atividade</h2>
-          <div class="box"><p>${escapeHtml(apr.descricao_atividade || "-")}</p></div>
-
-          <h2>Técnicos e assinaturas</h2>
-          <table>
-            <thead><tr><th>Técnico</th><th>Cargo</th><th>Status</th><th>Assinatura / Selfie</th></tr></thead>
-            <tbody>
-              ${tecsComAssinatura.map(t => `
-                <tr>
-                  <td>${escapeHtml(t.nome_tecnico || "-")} ${t.responsavel ? "(Responsável)" : ""}</td>
-                  <td>${escapeHtml(t.cargo || "-")}<br>${htmlAsoTecnico(t)}</td>
-                  <td>${t.assinado ? `<span class="badge ok">Assinado</span><br>${formatarData(t.assinado_em)}${formatarLocalizacaoAssinatura(t)}` : `<span class="badge pend">Pendente</span>`}</td>
-                  <td class="assinatura-cell">
-                    ${t.assinatura_url ? `<span class="selfie-label">Assinatura</span><img class="assinatura-img" src="${t.assinatura_url}">` : "-"}
-                    ${t.selfie_url ? `<span class="selfie-label">Selfie</span><img class="selfie-img" src="${t.selfie_url}">` : `<span class="selfie-label">Selfie: não registrada</span>`}
-                  </td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-
-          <h2>Checklist</h2>
-          <table>
-            <thead><tr><th>#</th><th>Grupo</th><th>Pergunta</th><th>Resposta</th><th>Observação</th></tr></thead>
-            <tbody>
-              ${(respostas || []).map(r => `
-                <tr>
-                  <td>${escapeHtml(r.ordem || "")}</td>
-                  <td>${escapeHtml(r.grupo || "-")}</td>
-                  <td>${escapeHtml(r.pergunta || "-")}</td>
-                  <td><strong>${escapeHtml(r.resposta || "-")}</strong></td>
-                  <td>${escapeHtml(r.observacao || "-")}</td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-
-          <h2>Observações adicionais</h2>
-          <div class="box"><p>${escapeHtml(apr.observacoes_adicionais || "-")}</p></div>
-
-          <div class="page-break"></div>
-          <h2>Fotos de comprovação</h2>
-          ${fotosComUrl.length ? `
-            <div class="foto-grid">
-              ${fotosComUrl.map(f => `
-                <div class="foto">
-                  <img src="${f.signed_url}">
-                  <p><strong>${escapeHtml(f.arquivo_nome || "Foto")}</strong></p>
-                  <p>Enviada em: ${formatarData(f.enviada_em)}</p>
-                </div>
-              `).join("")}
-            </div>
-          ` : `<p>Nenhuma foto vinculada.</p>`}
-        </body>
-        </html>
-      `;
-
+      // Importante: abrir a janela logo no clique evita bloqueio de popup,
+      // pois a busca das imagens/assinaturas é assíncrona.
       const janela = window.open("", "_blank");
       if (!janela) {
         alert("Permita pop-ups para baixar/imprimir a APR.");
         return;
       }
       janela.document.open();
-      janela.document.write(html);
+      janela.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Gerando APR...</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#1d2939}</style></head><body><h2>Gerando APR...</h2><p>Aguarde enquanto carregamos assinaturas, selfies e fotos.</p></body></html>`);
       janela.document.close();
-      setTimeout(() => {
-        janela.focus();
-        janela.print();
-      }, 900);
+
+      try {
+        const { data: apr, error: aprError } = await supabaseClient.from("aprs").select("*").eq("id", aprId).single();
+        if (aprError || !apr) {
+          janela.close();
+          alert("Erro ao carregar APR para download.");
+          return;
+        }
+
+        const { data: tecs } = await supabaseClient.from("apr_tecnicos").select("*").eq("apr_id", aprId).order("nome_tecnico");
+        const mapaTecnicosCadastro = new Map((tecnicosCache || []).map(t => [t.id, t]));
+        const { data: respostas } = await supabaseClient.from("apr_checklist_respostas").select("*").eq("apr_id", aprId).order("ordem");
+        const { data: fotos } = await supabaseClient.from("apr_fotos").select("*").eq("apr_id", aprId).order("enviada_em", { ascending: true });
+
+        const fotosComUrl = [];
+        for (const foto of (fotos || [])) {
+          const { data: signed } = await supabaseClient.storage.from("apr-arquivos").createSignedUrl(foto.storage_path, 60 * 60);
+          fotosComUrl.push({ ...foto, signed_url: signed?.signedUrl || "" });
+        }
+
+        const tecsComAssinatura = [];
+        for (const t of (tecs || [])) {
+          let assinatura_url = "";
+          let selfie_url = "";
+
+          if (t.assinatura_storage_path) {
+            const { data: signedAss } = await supabaseClient.storage.from("apr-arquivos").createSignedUrl(t.assinatura_storage_path, 60 * 60);
+            assinatura_url = signedAss?.signedUrl || "";
+          }
+
+          if (t.assinatura_selfie_storage_path) {
+            const { data: signedSelfie } = await supabaseClient.storage.from("apr-arquivos").createSignedUrl(t.assinatura_selfie_storage_path, 60 * 60);
+            selfie_url = signedSelfie?.signedUrl || "";
+          }
+
+          const cadastroTec = t.tecnico_id ? mapaTecnicosCadastro.get(t.tecnico_id) : null;
+          tecsComAssinatura.push({
+            ...(cadastroTec || {}),
+            ...t,
+            vinculo_id: t.id,
+            tecnico_cadastro_id: t.tecnico_id,
+            nome_tecnico: t.nome_tecnico || cadastroTec?.nome || t.nome || "Técnico",
+            cargo: t.cargo || cadastroTec?.cargo || "-",
+            assinatura_url,
+            selfie_url
+          });
+        }
+
+        const nomeArquivo = `APR-${apr.numero_apr || apr.numero_os || apr.id}`.replaceAll("/", "-").replaceAll(" ", "-");
+
+        const html = `
+          <!DOCTYPE html>
+          <html lang="pt-BR">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${escapeHtml(nomeArquivo)}</title>
+            <style>
+              body { font-family: Arial, Helvetica, sans-serif; color: #1d2939; margin: 24px; }
+              .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0057a8; padding-bottom: 12px; margin-bottom: 18px; gap: 16px; }
+              .brand { font-size: 24px; font-weight: 900; color: #0057a8; }
+              h1 { font-size: 22px; margin: 0 0 6px; color: #003b73; }
+              h2 { font-size: 16px; color: #003b73; border-bottom: 1px solid #d0d5dd; padding-bottom: 5px; margin-top: 22px; }
+              p { margin: 5px 0; font-size: 12px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
+              th, td { border: 1px solid #d0d5dd; padding: 6px; text-align: left; vertical-align: top; }
+              th { background: #f2f4f7; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+              .box { border: 1px solid #d0d5dd; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+              .badge { display: inline-block; border-radius: 999px; padding: 3px 7px; font-weight: 700; font-size: 10px; border: 1px solid #d0d5dd; }
+              .ok { background: #ecfdf3; color: #027a48; border-color: #abefc6; }
+              .pend { background: #eff8ff; color: #175cd3; border-color: #b2ddff; }
+              .foto-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+              .foto { border: 1px solid #d0d5dd; border-radius: 8px; padding: 6px; page-break-inside: avoid; }
+              .foto img { width: 100%; max-height: 230px; object-fit: contain; }
+              .assinatura-img { max-width: 220px; max-height: 90px; border: 1px solid #d0d5dd; margin-top: 6px; object-fit: contain; background: #fff; display: block; }
+              .selfie-img { width: 94px; height: 94px; border: 1px solid #d0d5dd; border-radius: 10px; object-fit: cover; background: #fff; margin-top: 6px; display: block; }
+              .assinatura-cell { min-width: 170px; }
+              .selfie-label { font-size: 10px; font-weight: 700; color: #344054; margin-top: 8px; display: block; }
+              @media print { body { margin: 12mm; } button { display: none; } .page-break { page-break-before: always; } }
+            </style>
+          </head>
+          <body>
+            <button onclick="window.print()" style="padding:10px 14px;border:0;border-radius:8px;background:#2bb673;color:white;font-weight:800;margin-bottom:14px;">Imprimir / Salvar PDF</button>
+            <div class="header">
+              <div>
+                <div class="brand">VIATEC</div>
+                <h1>PT - Permissão de Trabalho / APR - Análise Preliminar de Risco</h1>
+                <p>Documento gerado em ${formatarData(new Date().toISOString())}</p>
+              </div>
+              <div>
+                <p><strong>APR:</strong> ${escapeHtml(apr.numero_apr || "-")}</p>
+                <p><strong>Status:</strong> ${escapeHtml(labelStatus(apr.status))}</p>
+              </div>
+            </div>
+
+            <h2>Dados da OS / Cliente</h2>
+            <div class="grid">
+              <div class="box">
+                <p><strong>OS:</strong> ${escapeHtml(apr.numero_os || "-")}</p>
+                <p><strong>Protocolo:</strong> ${escapeHtml(apr.protocolo_os || "-")}</p>
+                <p><strong>Código do cliente:</strong> ${escapeHtml(apr.codigo_cliente || "-")}</p>
+                <p><strong>Cliente:</strong> ${escapeHtml(apr.cliente_nome || "-")}</p>
+              </div>
+              <div class="box">
+                <p><strong>Cidade/Bairro:</strong> ${escapeHtml(apr.cidade_bairro || "-")}</p>
+                <p><strong>Endereço:</strong> ${escapeHtml(apr.cliente_endereco || "-")}</p>
+                <p><strong>Serviço:</strong> ${escapeHtml(formatarTipoServico(apr.tipo_servico, apr.tipo_servico_outros))}</p>
+                <p><strong>Emitida em:</strong> ${formatarData(apr.emitida_em || apr.criada_em)}</p>
+              </div>
+            </div>
+
+            <h2>Descrição da atividade</h2>
+            <div class="box"><p>${escapeHtml(apr.descricao_atividade || "-")}</p></div>
+
+            <h2>Técnicos e assinaturas</h2>
+            <table>
+              <thead><tr><th>Técnico</th><th>Cargo</th><th>Status</th><th>Assinatura / Selfie</th></tr></thead>
+              <tbody>
+                ${tecsComAssinatura.map(t => `
+                  <tr>
+                    <td>${escapeHtml(t.nome_tecnico || "-")} ${t.responsavel ? "(Responsável)" : ""}</td>
+                    <td>${escapeHtml(t.cargo || "-")}<br>${htmlAsoTecnico(t)}</td>
+                    <td>${t.assinado ? `<span class="badge ok">Assinado</span><br>${formatarData(t.assinado_em)}${formatarLocalizacaoAssinatura(t)}` : `<span class="badge pend">Pendente</span>`}</td>
+                    <td class="assinatura-cell">
+                      ${t.assinatura_url ? `<span class="selfie-label">Assinatura</span><img class="assinatura-img" src="${t.assinatura_url}">` : "-"}
+                      ${t.selfie_url ? `<span class="selfie-label">Selfie</span><img class="selfie-img" src="${t.selfie_url}">` : `<span class="selfie-label">Selfie: não registrada</span>`}
+                    </td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+
+            <h2>Checklist</h2>
+            <table>
+              <thead><tr><th>#</th><th>Grupo</th><th>Pergunta</th><th>Resposta</th><th>Observação</th></tr></thead>
+              <tbody>
+                ${(respostas || []).map(r => `
+                  <tr>
+                    <td>${escapeHtml(r.ordem || "")}</td>
+                    <td>${escapeHtml(r.grupo || "-")}</td>
+                    <td>${escapeHtml(r.pergunta || "-")}</td>
+                    <td><strong>${escapeHtml(r.resposta || "-")}</strong></td>
+                    <td>${escapeHtml(r.observacao || "-")}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+
+            <h2>Observações adicionais</h2>
+            <div class="box"><p>${escapeHtml(apr.observacoes_adicionais || "-")}</p></div>
+
+            <div class="page-break"></div>
+            <h2>Fotos de comprovação</h2>
+            ${fotosComUrl.length ? `
+              <div class="foto-grid">
+                ${fotosComUrl.map(f => `
+                  <div class="foto">
+                    <img src="${f.signed_url}">
+                    <p><strong>${escapeHtml(f.arquivo_nome || "Foto")}</strong></p>
+                    <p>Enviada em: ${formatarData(f.enviada_em)}</p>
+                  </div>
+                `).join("")}
+              </div>
+            ` : `<p>Nenhuma foto vinculada.</p>`}
+          </body>
+          </html>
+        `;
+
+        janela.document.open();
+        janela.document.write(html);
+        janela.document.close();
+        setTimeout(() => {
+          try { janela.focus(); janela.print(); } catch (e) { console.warn(e); }
+        }, 900);
+      } catch (err) {
+        janela.close();
+        alert("Erro ao gerar APR: " + (err?.message || err));
+      }
     }
 
 
