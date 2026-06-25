@@ -1,9 +1,9 @@
 {
-  "id": "/Apr/",
+  "id": "/Apr/android-final-8",
   "name": "APR Digital ViaTec",
   "short_name": "APR ViaTec",
   "description": "Sistema APR Digital / PT - Permissão de Trabalho da ViaTec",
-  "start_url": "/Apr/index.html",
+  "start_url": "/Apr/index.html?v=android-final-8",
   "scope": "/Apr/",
   "display": "standalone",
   "background_color": "#f4f8fb",
