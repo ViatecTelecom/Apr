@@ -2,27 +2,27 @@
   "name": "APR Digital ViaTec",
   "short_name": "APR ViaTec",
   "description": "Sistema APR Digital / PT - Permissão de Trabalho da ViaTec",
-  "start_url": "./index.html",
-  "scope": "./",
+  "start_url": "/Apr/index.html",
+  "scope": "/Apr/",
   "display": "standalone",
   "background_color": "#f4f8fb",
   "theme_color": "#0b5ed7",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "./icon-192.png",
+      "src": "/Apr/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "./icon-512.png",
+      "src": "/Apr/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "./apple-touch-icon.png",
+      "src": "/Apr/apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png"
     }
