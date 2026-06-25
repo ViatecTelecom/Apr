@@ -1,4 +1,4 @@
-const CACHE_NAME = "apr-digital-viatec-v18-icons";
+const CACHE_NAME = "apr-digital-viatec-v24-android-final-8";
 
 const APP_SHELL = [
   "/Apr/",
