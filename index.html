@@ -4472,7 +4472,18 @@
         }
 
         const cadastroTec = t.tecnico_id ? mapaTecnicosCadastro.get(t.tecnico_id) : null;
-        tecsComAssinatura.push({ ...t, ...cadastroTec, nome_tecnico: t.nome_tecnico, assinatura_url, selfie_url });
+        // IMPORTANTE: o id usado para assinar precisa ser o id do vínculo em apr_tecnicos.
+        // Antes, ao mesclar com o cadastro do técnico, o id do cadastro podia sobrescrever o id do vínculo.
+        // Isso fazia aparecer: "Técnico não encontrado nesta APR para assinatura" para técnicos adicionados.
+        tecsComAssinatura.push({
+          ...(cadastroTec || {}),
+          ...t,
+          vinculo_id: t.id,
+          tecnico_cadastro_id: t.tecnico_id,
+          nome_tecnico: t.nome_tecnico || cadastroTec?.nome || t.nome || "Técnico",
+          assinatura_url,
+          selfie_url
+        });
       }
 
       const meuVinculo = tecsComAssinatura.find(t => t.usuario_id === usuarioAtual.id);
@@ -4508,7 +4519,7 @@
                   ${t.selfie_url ? `<br><span class="small"><strong>Selfie da assinatura:</strong></span><br><img class="assinatura-img" src="${t.selfie_url}" alt="Selfie de ${escapeHtml(t.nome_tecnico)}">` : ""}
                 </div>
                 <div class="row-actions">
-                  ${!t.assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinatura('${apr.id}', '${t.id}')">Assinar ${escapeHtml(t.nome_tecnico || 'técnico')}</button>` : ""}
+                  ${!t.assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinatura('${apr.id}', '${t.vinculo_id || t.id}')">Assinar ${escapeHtml(t.nome_tecnico || 'técnico')}</button>` : ""}
                 </div>
               </div>
             `).join("") : "<p>Nenhum técnico vinculado.</p>"}
