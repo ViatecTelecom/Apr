@@ -4519,7 +4519,7 @@
                   ${t.selfie_url ? `<br><span class="small"><strong>Selfie da assinatura:</strong></span><br><img class="assinatura-img" src="${t.selfie_url}" alt="Selfie de ${escapeHtml(t.nome_tecnico)}">` : ""}
                 </div>
                 <div class="row-actions">
-                  ${!t.assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinatura('${apr.id}', '${t.vinculo_id || t.id}')">Assinar ${escapeHtml(t.nome_tecnico || 'técnico')}</button>` : ""}
+                  ${!t.assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinatura('${apr.id}', '${t.vinculo_id || t.id}', '${t.tecnico_cadastro_id || t.tecnico_id || ''}', ${JSON.stringify(t.nome_tecnico || t.nome || 'Técnico')})">Assinar ${escapeHtml(t.nome_tecnico || 'técnico')}</button>` : ""}
                 </div>
               </div>
             `).join("") : "<p>Nenhum técnico vinculado.</p>"}
@@ -5118,7 +5118,7 @@
       setTimeout(inicializarCanvasAssinatura, 80);
     }
 
-    async function abrirModalAssinatura(aprId, vinculoId = null) {
+    async function abrirModalAssinatura(aprId, vinculoId = null, tecnicoCadastroId = null, nomeTecnicoFallback = null) {
       clearMsg("assinaturaMsg");
       limparSelfieAssinatura(false);
 
@@ -5133,26 +5133,51 @@
         return;
       }
 
-      let queryVinculo = supabaseClient
+      let vinculo = null;
+
+      // Primeiro tenta carregar todos os vínculos da APR.
+      // Isso evita erro quando o botão recebe o id do cadastro do técnico
+      // ou quando o vínculo exato não é encontrado por comparação direta.
+      const { data: vinculosApr, error: vinculosError } = await supabaseClient
         .from("apr_tecnicos")
         .select("*")
         .eq("apr_id", aprId);
 
-      if (vinculoId) {
-        queryVinculo = queryVinculo.eq("id", vinculoId);
-      } else {
-        queryVinculo = queryVinculo.eq("usuario_id", usuarioAtual.id);
-      }
-
-      const { data: vinculo, error: vincError } = await queryVinculo.maybeSingle();
-
-      if (vincError) {
-        alert("Erro ao carregar vínculo de assinatura: " + vincError.message);
+      if (vinculosError) {
+        alert("Erro ao carregar vínculos de assinatura: " + vinculosError.message);
         return;
       }
 
+      const normalizarTexto = (valor) => String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+
+      const idRecebido = String(vinculoId || "").trim();
+      const tecnicoIdRecebido = String(tecnicoCadastroId || "").trim();
+      const nomeRecebido = normalizarTexto(nomeTecnicoFallback);
+
+      if (vinculoId) {
+        vinculo = (vinculosApr || []).find(v =>
+          String(v.id || "") === idRecebido ||
+          String(v.tecnico_id || "") === idRecebido ||
+          (tecnicoIdRecebido && String(v.tecnico_id || "") === tecnicoIdRecebido) ||
+          (nomeRecebido && normalizarTexto(v.nome_tecnico) === nomeRecebido)
+        );
+      } else {
+        vinculo = (vinculosApr || []).find(v => v.usuario_id === usuarioAtual.id);
+      }
+
       if (!vinculo) {
-        alert(vinculoId ? "Técnico não encontrado nesta APR para assinatura." : "Você não está vinculado a esta APR para assinar.");
+        console.warn("Vínculo não encontrado para assinatura", {
+          aprId,
+          vinculoId,
+          tecnicoCadastroId,
+          nomeTecnicoFallback,
+          vinculosApr
+        });
+        alert(vinculoId ? "Técnico não encontrado nesta APR para assinatura. Atualize a página e tente novamente." : "Você não está vinculado a esta APR para assinar.");
         return;
       }
 
