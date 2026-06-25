@@ -1,10 +1,13 @@
-const CACHE_NAME = "apr-digital-viatec-v17";
+const CACHE_NAME = "apr-digital-viatec-v18-icons";
 
 const APP_SHELL = [
   "/Apr/",
   "/Apr/index.html",
   "/Apr/manifest.json",
   "/Apr/logo.png",
+  "/Apr/icon-192.png",
+  "/Apr/icon-512.png",
+  "/Apr/apple-touch-icon.png",
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
 ];
 
