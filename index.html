@@ -2,23 +2,6 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-
-  <link rel="manifest" href="/Apr/manifest.json?v=android-final-8">
-
-  <link rel="icon" type="image/png" sizes="192x192" href="/Apr/icon-192.png?v=8">
-  <link rel="icon" type="image/png" sizes="512x512" href="/Apr/icon-512.png?v=8">
-  <link rel="shortcut icon" href="/Apr/icon-192.png?v=8">
-
-  <link rel="apple-touch-icon" href="/Apr/apple-touch-icon.png?v=8">
-
-  <meta name="theme-color" content="#0b5ed7">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="application-name" content="APR ViaTec">
-
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="APR ViaTec">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PT - Permissão de Trabalho | APR Digital ViaTec</title>
 
@@ -1774,6 +1757,17 @@
                 <p class="small">Crie primeiro o usuário em Authentication &gt; Users. Ao salvar, o sistema vincula este técnico ao login pelo e-mail.</p>
               </div>
 
+              <div class="grid grid-2">
+                <div class="field">
+                  <label>Validade do ASO</label>
+                  <input id="tecAsoValidade" type="date">
+                </div>
+                <div class="field">
+                  <label>Observação do ASO</label>
+                  <input id="tecAsoObservacao" placeholder="Ex.: apto, pendente, renovar...">
+                </div>
+              </div>
+
               <div class="field">
                 <label>Status</label>
                 <select id="tecAtivo">
@@ -1986,6 +1980,17 @@
 
       <div id="assinaturaAprInfo" class="form-section"></div>
 
+      <div class="form-section">
+        <h4>Selfie do técnico</h4>
+        <p class="small">Tire uma selfie no momento da assinatura para comprovar quem assinou a APR.</p>
+        <div class="row-actions">
+          <label class="btn btn-green" for="inputSelfieAssinatura">Tirar selfie</label>
+          <button class="btn btn-light" type="button" onclick="limparSelfieAssinatura()">Limpar selfie</button>
+        </div>
+        <input id="inputSelfieAssinatura" class="foto-input" type="file" accept="image/*" capture="user" onchange="selecionarSelfieAssinatura(event)">
+        <div id="selfieAssinaturaPreview" class="foto-grid"></div>
+      </div>
+
       <div class="declaracao-box">
         <label style="display:flex;align-items:flex-start;gap:10px;margin:0;">
           <input id="checkDeclaracaoAssinatura" type="checkbox" style="width:auto;margin-top:3px;">
@@ -2035,6 +2040,7 @@
     let fotosPendentesApr = [];
     let fotosExistentesApr = [];
     let assinaturaAprAtual = null;
+    let assinaturaSelfieAtual = null;
     let signatureState = { drawing: false, signed: false, canvasReady: false };
 
     document.addEventListener("DOMContentLoaded", async () => {
@@ -2523,6 +2529,26 @@
       carregarAprs();
     }
 
+    function statusAsoTecnico(t) {
+      const validade = t?.aso_validade;
+      if (!validade) return { classe: "aguardando_assinaturas", texto: "ASO não informado", detalhe: "" };
+
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const dataValidade = new Date(validade + "T00:00:00");
+      const diffDias = Math.ceil((dataValidade.getTime() - hoje.getTime()) / 86400000);
+
+      if (diffDias < 0) return { classe: "cancelada", texto: "ASO vencido", detalhe: `Venceu em ${formatarData(validade)}` };
+      if (diffDias <= 30) return { classe: "rascunho", texto: "ASO a vencer", detalhe: `Vence em ${formatarData(validade)}` };
+      return { classe: "finalizada", texto: "ASO válido", detalhe: `Válido até ${formatarData(validade)}` };
+    }
+
+    function htmlAsoTecnico(t) {
+      const aso = statusAsoTecnico(t);
+      const obs = t?.aso_observacao ? `<br><span class="small">${escapeHtml(t.aso_observacao)}</span>` : "";
+      return `<span class="badge ${aso.classe}">${aso.texto}</span><br><span class="small">${escapeHtml(aso.detalhe || "Informe a validade no cadastro do técnico.")}</span>${obs}`;
+    }
+
     function getTecnicosFiltradosCadastro() {
       const termo = (document.getElementById("filtroTecnicoCadastro")?.value || "").toLowerCase().trim();
 
@@ -2562,7 +2588,7 @@
         return arr.map(t => `
           <tr>
             <td><strong>${escapeHtml(t.nome)}</strong></td>
-            <td>${escapeHtml(t.cargo || "-")}</td>
+            <td>${escapeHtml(t.cargo || "-")}<br>${htmlAsoTecnico(t)}</td>
             <td>
               ${t.usuario_email ? escapeHtml(t.usuario_email) : '<span class="badge aguardando_assinaturas">Sem e-mail</span>'}
               ${t.usuario_id ? '<br><span class="small">Vinculado</span>' : '<br><span class="small danger-text">Sem vínculo</span>'}
@@ -2585,6 +2611,7 @@
           <div class="tecnico-mobile-card">
             <strong>${escapeHtml(t.nome)}</strong>
             <div class="small" style="margin-top:4px;">${escapeHtml(t.cargo || "-")}</div>
+            <div style="margin-top:6px;">${htmlAsoTecnico(t)}</div>
             ${t.telefone ? `<div class="small" style="margin-top:4px;">Telefone: ${escapeHtml(t.telefone)}</div>` : ""}
             <div class="small" style="margin-top:4px;">Login: ${t.usuario_email ? escapeHtml(t.usuario_email) : 'Sem e-mail'} ${t.usuario_id ? '• Vinculado' : '• Sem vínculo'}</div>
             <div style="margin-top:8px;">
@@ -2645,6 +2672,8 @@
       document.getElementById("tecCargo").value = t.cargo || "";
       document.getElementById("tecTelefone").value = t.telefone || "";
       document.getElementById("tecEmailLogin").value = t.usuario_email || "";
+      document.getElementById("tecAsoValidade").value = t.aso_validade || "";
+      document.getElementById("tecAsoObservacao").value = t.aso_observacao || "";
       document.getElementById("tecAtivo").value = String(!!t.ativo);
 
       document.getElementById("tituloFormTecnico").textContent = "Editando técnico";
@@ -2661,6 +2690,8 @@
       document.getElementById("tecCargo").value = "Técnico/Auxiliar de Telecomunicações";
       document.getElementById("tecTelefone").value = "";
       document.getElementById("tecEmailLogin").value = "";
+      document.getElementById("tecAsoValidade").value = "";
+      document.getElementById("tecAsoObservacao").value = "";
       document.getElementById("tecAtivo").value = "true";
 
       document.getElementById("tituloFormTecnico").textContent = "Novo técnico";
@@ -2682,6 +2713,8 @@
       const cargo = document.getElementById("tecCargo").value.trim();
       const telefone = document.getElementById("tecTelefone").value.trim();
       const emailLogin = document.getElementById("tecEmailLogin").value.trim().toLowerCase();
+      const asoValidade = document.getElementById("tecAsoValidade").value || null;
+      const asoObservacao = document.getElementById("tecAsoObservacao").value.trim();
       const ativo = document.getElementById("tecAtivo").value === "true";
 
       if (!nome) {
@@ -2714,7 +2747,9 @@
         telefone,
         ativo,
         usuario_email: emailLogin || null,
-        usuario_id: usuarioIdVinculado
+        usuario_id: usuarioIdVinculado,
+        aso_validade: asoValidade,
+        aso_observacao: asoObservacao || null
       };
 
       let error;
@@ -3347,9 +3382,9 @@
 
       setInterval(() => {
         if (navigator.onLine) {
-          tentarSincronizacaoAutomaticaOffline("verificacao periodica");
+          tentarSincronizacaoAutomaticaOffline("verificacao periodica 5 minutos");
         }
-      }, 60000);
+      }, 300000);
     }
 
     function atualizarStatusOffline(extra = "") {
@@ -3810,6 +3845,17 @@
           if (uploadAssError) throw uploadAssError;
 
           t.assinatura_storage_path_sync = pathAss;
+
+          if (assinatura.selfie_blob) {
+            const nomeArquivoSelfie = `${Date.now()}-${i + 1}-${t.usuario_id || t.id}-selfie.webp`;
+            const pathSelfie = `selfies_assinatura/${anoAss}/${mesAss}/${aprNumero || aprId}/${nomeArquivoSelfie}`;
+            const { error: uploadSelfieError } = await supabaseClient.storage.from("apr-arquivos").upload(pathSelfie, assinatura.selfie_blob, {
+              contentType: assinatura.selfie_mime_type || "image/webp",
+              upsert: false
+            });
+            if (uploadSelfieError) throw uploadSelfieError;
+            t.assinatura_selfie_storage_path_sync = pathSelfie;
+          }
         }
 
         const tecnicosInsert = (item.tecnicos || []).map(t => {
@@ -3827,6 +3873,9 @@
             assinatura_storage_path: t.assinatura_storage_path_sync || null,
             assinatura_mime_type: assinatura ? "image/png" : null,
             assinatura_hash: assinatura?.hash || null,
+            assinatura_selfie_storage_path: t.assinatura_selfie_storage_path_sync || null,
+            assinatura_selfie_mime_type: assinatura?.selfie_mime_type || null,
+            assinatura_selfie_hash: assinatura?.selfie_hash || null,
             assinado_em: assinatura?.assinado_em || null,
             assinatura_latitude: assinatura?.assinatura_latitude ?? null,
             assinatura_longitude: assinatura?.assinatura_longitude ?? null,
@@ -3926,6 +3975,7 @@
             dados: {
               assinatura_hash: t.assinatura_offline.hash,
               assinatura_storage_path: t.assinatura_storage_path_sync || null,
+              assinatura_selfie_storage_path: t.assinatura_selfie_storage_path_sync || null,
               localizacao: {
                 latitude: t.assinatura_offline.assinatura_latitude,
                 longitude: t.assinatura_offline.assinatura_longitude,
@@ -4395,10 +4445,12 @@
       if (!apr) return;
 
       const fotosComUrl = await buscarFotosComUrlApr(id);
+      const mapaTecnicosCadastro = new Map((tecnicosCache || []).map(t => [t.id, t]));
 
       const tecsComAssinatura = [];
       for (const t of (tecs || [])) {
         let assinatura_url = "";
+        let selfie_url = "";
 
         if (t.assinatura_storage_path) {
           const { data: signedAss } = await supabaseClient
@@ -4409,7 +4461,17 @@
           assinatura_url = signedAss?.signedUrl || "";
         }
 
-        tecsComAssinatura.push({ ...t, assinatura_url });
+        if (t.assinatura_selfie_storage_path) {
+          const { data: signedSelfie } = await supabaseClient
+            .storage
+            .from("apr-arquivos")
+            .createSignedUrl(t.assinatura_selfie_storage_path, 60 * 60);
+
+          selfie_url = signedSelfie?.signedUrl || "";
+        }
+
+        const cadastroTec = t.tecnico_id ? mapaTecnicosCadastro.get(t.tecnico_id) : null;
+        tecsComAssinatura.push({ ...t, ...cadastroTec, nome_tecnico: t.nome_tecnico, assinatura_url, selfie_url });
       }
 
       const meuVinculo = tecsComAssinatura.find(t => t.usuario_id === usuarioAtual.id);
@@ -4425,7 +4487,7 @@
           <p><strong>Status:</strong> ${labelStatus(apr.status)}</p>
           <div class="row-actions">
             ${perfilAtual?.perfil === "admin" ? `<button class="btn btn-green" onclick="baixarAprPdf('${apr.id}')">Baixar APR</button>` : ""}
-            ${possoAssinar ? `<button class="btn btn-primary" onclick="abrirModalAssinatura('${apr.id}')">Assinar esta APR</button>` : ""}
+            ${tecsComAssinatura.some(t => !t.assinado) ? `<span class="small">Assinatura online liberada no mesmo aparelho: abra o botão de cada técnico pendente abaixo.</span>` : ""}
           </div>
         </div>
 
@@ -4440,7 +4502,12 @@
                     ? `<span class="badge finalizada">Assinado</span> <span class="small">${formatarData(t.assinado_em)}</span>`
                     : `<span class="badge aguardando_assinaturas">Pendente</span>`}
                   ${formatarLocalizacaoAssinatura(t)}
+                  <br>${htmlAsoTecnico(t)}
                   ${t.assinatura_url ? `<br><img class="assinatura-img" src="${t.assinatura_url}" alt="Assinatura de ${escapeHtml(t.nome_tecnico)}">` : ""}
+                  ${t.selfie_url ? `<br><span class="small"><strong>Selfie da assinatura:</strong></span><br><img class="assinatura-img" src="${t.selfie_url}" alt="Selfie de ${escapeHtml(t.nome_tecnico)}">` : ""}
+                </div>
+                <div class="row-actions">
+                  ${!t.assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinatura('${apr.id}', '${t.id}')">Assinar ${escapeHtml(t.nome_tecnico || 'técnico')}</button>` : ""}
                 </div>
               </div>
             `).join("") : "<p>Nenhum técnico vinculado.</p>"}
@@ -4582,7 +4649,8 @@
             .createSignedUrl(t.assinatura_storage_path, 60 * 60);
           assinatura_url = signedAss?.signedUrl || "";
         }
-        tecsComAssinatura.push({ ...t, assinatura_url });
+        const cadastroTec = t.tecnico_id ? mapaTecnicosCadastro.get(t.tecnico_id) : null;
+        tecsComAssinatura.push({ ...t, ...cadastroTec, nome_tecnico: t.nome_tecnico, assinatura_url });
       }
 
       const nomeArquivo = `APR-${apr.numero_apr || apr.numero_os || apr.id}`.replaceAll("/", "-").replaceAll(" ", "-");
@@ -4856,7 +4924,7 @@
               ${tecsComAssinatura.map(t => `
                 <tr>
                   <td>${escapeHtml(t.nome_tecnico || "-")} ${t.responsavel ? "(Responsável)" : ""}</td>
-                  <td>${escapeHtml(t.cargo || "-")}</td>
+                  <td>${escapeHtml(t.cargo || "-")}<br>${htmlAsoTecnico(t)}</td>
                   <td>${t.assinado ? `<span class="badge ok">Assinado</span><br>${formatarData(t.assinado_em)}${formatarLocalizacaoAssinatura(t)}` : `<span class="badge pend">Pendente</span>`}</td>
                   <td>${t.assinatura_url ? `<img class="assinatura-img" src="${t.assinatura_url}">` : "-"}</td>
                 </tr>
@@ -5006,6 +5074,7 @@
 
     async function abrirModalAssinaturaOffline(offlineId, tecnicoIndex = null) {
       clearMsg("assinaturaMsg");
+      limparSelfieAssinatura(false);
 
       const lista = await dbOfflineGetAll();
       const item = lista.find(i => i.offline_id === offlineId);
@@ -5051,12 +5120,14 @@
       const check = document.getElementById("checkDeclaracaoAssinatura");
       if (check) check.checked = false;
 
+      renderSelfieAssinaturaPreview();
       document.getElementById("modalAssinaturaApr").classList.remove("hidden");
       setTimeout(inicializarCanvasAssinatura, 80);
     }
 
-    async function abrirModalAssinatura(aprId) {
+    async function abrirModalAssinatura(aprId, vinculoId = null) {
       clearMsg("assinaturaMsg");
+      limparSelfieAssinatura(false);
 
       const { data: apr, error: aprError } = await supabaseClient
         .from("aprs")
@@ -5069,12 +5140,18 @@
         return;
       }
 
-      const { data: vinculo, error: vincError } = await supabaseClient
+      let queryVinculo = supabaseClient
         .from("apr_tecnicos")
         .select("*")
-        .eq("apr_id", aprId)
-        .eq("usuario_id", usuarioAtual.id)
-        .maybeSingle();
+        .eq("apr_id", aprId);
+
+      if (vinculoId) {
+        queryVinculo = queryVinculo.eq("id", vinculoId);
+      } else {
+        queryVinculo = queryVinculo.eq("usuario_id", usuarioAtual.id);
+      }
+
+      const { data: vinculo, error: vincError } = await queryVinculo.maybeSingle();
 
       if (vincError) {
         alert("Erro ao carregar vínculo de assinatura: " + vincError.message);
@@ -5082,12 +5159,12 @@
       }
 
       if (!vinculo) {
-        alert("Você não está vinculado a esta APR para assinar.");
+        alert(vinculoId ? "Técnico não encontrado nesta APR para assinatura." : "Você não está vinculado a esta APR para assinar.");
         return;
       }
 
       if (vinculo.assinado) {
-        alert("Esta APR já foi assinada por você.");
+        alert("Esta APR já foi assinada por este técnico.");
         return;
       }
 
@@ -5097,7 +5174,8 @@
 
       document.getElementById("assinaturaAprInfo").innerHTML = `
         <h4>${escapeHtml(apr.numero_apr || 'APR')}</h4>
-        <p><strong>Técnico:</strong> ${escapeHtml(vinculo.nome_tecnico || perfilAtual?.nome || '-')}</p>
+        <p><strong>Técnico que está assinando:</strong> ${escapeHtml(vinculo.nome_tecnico || perfilAtual?.nome || '-')}</p>
+        <p class="small"><strong>Assinatura no mesmo aparelho:</strong> confira o nome do técnico antes de coletar a selfie e assinatura.</p>
         <p><strong>OS:</strong> ${escapeHtml(apr.numero_os || '-')}</p>
         <p><strong>Cliente:</strong> ${escapeHtml(apr.cliente_nome || '-')}</p>
         <p><strong>Atividade:</strong> ${escapeHtml(apr.descricao_atividade || '-')}</p>
@@ -5113,6 +5191,7 @@
       const check = document.getElementById("checkDeclaracaoAssinatura");
       if (check) check.checked = false;
 
+      renderSelfieAssinaturaPreview();
       document.getElementById("modalAssinaturaApr").classList.remove("hidden");
       setTimeout(inicializarCanvasAssinatura, 80);
     }
@@ -5120,6 +5199,7 @@
     function fecharModalAssinatura() {
       document.getElementById("modalAssinaturaApr").classList.add("hidden");
       assinaturaAprAtual = null;
+      limparSelfieAssinatura(false);
       clearMsg("assinaturaMsg");
     }
 
@@ -5171,6 +5251,71 @@
         x: event.clientX - rect.left,
         y: event.clientY - rect.top
       };
+    }
+
+    function renderSelfieAssinaturaPreview() {
+      const box = document.getElementById("selfieAssinaturaPreview");
+      if (!box) return;
+
+      if (!assinaturaSelfieAtual) {
+        box.innerHTML = `<div class="foto-empty">Nenhuma selfie capturada ainda.</div>`;
+        return;
+      }
+
+      box.innerHTML = `
+        <div class="foto-card">
+          <img src="${assinaturaSelfieAtual.preview_url}" alt="Selfie da assinatura">
+          <div class="foto-card-body">
+            <strong>Selfie capturada</strong>
+            <span class="small">${formatBytes(assinaturaSelfieAtual.tamanho_comprimido_bytes || 0)}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    async function selecionarSelfieAssinatura(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        alert("Selecione uma imagem para a selfie.");
+        event.target.value = "";
+        return;
+      }
+
+      try {
+        const comprimida = await comprimirImagem(file, 1000, 0.78);
+        const hash = await gerarHashBlob(comprimida.blob);
+
+        if (assinaturaSelfieAtual?.preview_url) URL.revokeObjectURL(assinaturaSelfieAtual.preview_url);
+
+        assinaturaSelfieAtual = {
+          blob: comprimida.blob,
+          preview_url: URL.createObjectURL(comprimida.blob),
+          nome_original: file.name,
+          mime_type: comprimida.blob.type || "image/webp",
+          hash,
+          largura: comprimida.largura,
+          altura: comprimida.altura,
+          tamanho_original_bytes: file.size,
+          tamanho_comprimido_bytes: comprimida.blob.size
+        };
+
+        renderSelfieAssinaturaPreview();
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao processar selfie: " + (err.message || file.name));
+      } finally {
+        event.target.value = "";
+      }
+    }
+
+    function limparSelfieAssinatura(render = true) {
+      if (assinaturaSelfieAtual?.preview_url) URL.revokeObjectURL(assinaturaSelfieAtual.preview_url);
+      assinaturaSelfieAtual = null;
+      if (render) renderSelfieAssinaturaPreview();
+      const input = document.getElementById("inputSelfieAssinatura");
+      if (input) input.value = "";
     }
 
     function limparAssinaturaCanvas() {
@@ -5312,6 +5457,9 @@
         blob,
         mime_type: "image/png",
         hash,
+        selfie_blob: assinaturaSelfieAtual?.blob || null,
+        selfie_mime_type: assinaturaSelfieAtual?.mime_type || null,
+        selfie_hash: assinaturaSelfieAtual?.hash || null,
         assinado_em: agoraIso,
         assinatura_latitude: localizacao.latitude,
         assinatura_longitude: localizacao.longitude,
@@ -5367,6 +5515,11 @@
         return;
       }
 
+      if (!assinaturaSelfieAtual?.blob) {
+        setMsg("assinaturaMsg", "err", "Tire a selfie do técnico antes de confirmar a assinatura.");
+        return;
+      }
+
       setMsg("assinaturaMsg", "ok", "Capturando localização do técnico...");
 
       let localizacao;
@@ -5393,6 +5546,8 @@
       const mes = String(agora.getMonth() + 1).padStart(2, "0");
       const nomeArquivo = `${Date.now()}-${usuarioAtual.id}.png`;
       const path = `assinaturas/${ano}/${mes}/${apr.numero_apr || apr.id}/${nomeArquivo}`;
+      const nomeArquivoSelfie = `${Date.now()}-${vinculo.id}-selfie.webp`;
+      const pathSelfie = `selfies_assinatura/${ano}/${mes}/${apr.numero_apr || apr.id}/${nomeArquivoSelfie}`;
 
       const { error: uploadError } = await supabaseClient
         .storage
@@ -5407,6 +5562,19 @@
         return;
       }
 
+      const { error: uploadSelfieError } = await supabaseClient
+        .storage
+        .from("apr-arquivos")
+        .upload(pathSelfie, assinaturaSelfieAtual.blob, {
+          contentType: assinaturaSelfieAtual.mime_type || "image/webp",
+          upsert: false
+        });
+
+      if (uploadSelfieError) {
+        setMsg("assinaturaMsg", "err", "Assinatura enviada, mas erro ao enviar selfie: " + uploadSelfieError.message);
+        return;
+      }
+
       const { error: updateError } = await supabaseClient
         .from("apr_tecnicos")
         .update({
@@ -5415,6 +5583,9 @@
           assinatura_storage_path: path,
           assinatura_mime_type: "image/png",
           assinatura_hash: hash,
+          assinatura_selfie_storage_path: pathSelfie,
+          assinatura_selfie_mime_type: assinaturaSelfieAtual.mime_type || "image/webp",
+          assinatura_selfie_hash: assinaturaSelfieAtual.hash || null,
           assinado_em: agora.toISOString(),
           assinatura_latitude: localizacao.latitude,
           assinatura_longitude: localizacao.longitude,
@@ -5422,8 +5593,7 @@
           assinatura_localizacao_capturada_em: localizacao.capturadaEm,
           user_agent_assinatura: navigator.userAgent || null
         })
-        .eq("id", vinculo.id)
-        .eq("usuario_id", usuarioAtual.id);
+        .eq("id", vinculo.id);
 
       if (updateError) {
         setMsg("assinaturaMsg", "err", "Assinatura enviada, mas erro ao salvar no banco: " + updateError.message);
@@ -5438,6 +5608,7 @@
         dados: {
           assinatura_hash: hash,
           assinatura_storage_path: path,
+          assinatura_selfie_storage_path: pathSelfie,
           localizacao: {
             latitude: localizacao.latitude,
             longitude: localizacao.longitude,
@@ -5449,7 +5620,7 @@
 
       await atualizarStatusAprDepoisDasAssinaturas(apr.id);
 
-      setMsg("assinaturaMsg", "ok", "Assinatura registrada com sucesso.");
+      setMsg("assinaturaMsg", "ok", "Assinatura, selfie e localização registradas com sucesso.");
 
       setTimeout(async () => {
         fecharModalAssinatura();
@@ -5596,7 +5767,9 @@
         telefone,
         ativo,
         usuario_email: emailLogin || null,
-        usuario_id: usuarioIdVinculado
+        usuario_id: usuarioIdVinculado,
+        aso_validade: asoValidade,
+        aso_observacao: asoObservacao || null
       };
 
       let error;
