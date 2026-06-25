@@ -3047,7 +3047,6 @@
 
     async function selecionarFotosApr(event) {
       const files = Array.from(event.target.files || []);
-
       if (!files.length) return;
 
       for (const file of files) {
@@ -3058,6 +3057,7 @@
 
           fotosPendentesApr.push({
             id_local: crypto.randomUUID(),
+            tipo_local: "foto_apr",
             file_original: file,
             blob: comprimida.blob,
             preview_url: URL.createObjectURL(comprimida.blob),
@@ -3683,15 +3683,18 @@
           respondido_em: agora,
           bloqueou_finalizacao: r.resposta === "N" && !!r.modelo.bloqueia_finalizacao_se_nao
         })),
-        fotos: fotosPendentesApr.map(f => ({
-          blob: f.blob,
-          nome_original: f.nome_original,
-          mime_type: f.mime_type || "image/webp",
-          tamanho_original_bytes: f.tamanho_original_bytes,
-          tamanho_comprimido_bytes: f.tamanho_comprimido_bytes,
-          largura: f.largura,
-          altura: f.altura
-        }))
+        fotos: fotosPendentesApr
+          .filter(f => (f.tipo_local || "foto_apr") === "foto_apr")
+          .map(f => ({
+            tipo_local: "foto_apr",
+            blob: f.blob,
+            nome_original: f.nome_original,
+            mime_type: f.mime_type || "image/webp",
+            tamanho_original_bytes: f.tamanho_original_bytes,
+            tamanho_comprimido_bytes: f.tamanho_comprimido_bytes,
+            largura: f.largura,
+            altura: f.altura
+          }))
       };
     }
 
@@ -3832,15 +3835,41 @@
           if (error) throw error;
         }
 
-        for (let i = 0; i < (item.fotos || []).length; i++) {
-          const foto = item.fotos[i];
+        // Upload das fotos de comprovação.
+        // Proteção: não envia assinaturas para a tabela apr_fotos.
+        // Em modo offline, assinatura fica em item.tecnicos[].assinatura_offline e deve ir apenas para apr_tecnicos/storage assinaturas.
+        const hashesAssinaturas = new Set((item.tecnicos || [])
+          .map(t => t.assinatura_offline?.hash)
+          .filter(Boolean));
+
+        const fotosParaEnviar = [];
+        for (const foto of (item.fotos || [])) {
+          if (!foto?.blob) continue;
+          if ((foto.tipo_local || "foto_apr") !== "foto_apr") continue;
+
+          // Se por algum bug antigo uma assinatura caiu na lista de fotos, ignora.
+          try {
+            const hashFoto = await gerarHashBlob(foto.blob);
+            if (hashesAssinaturas.has(hashFoto)) {
+              console.warn("Foto ignorada na sincronização porque é igual a uma assinatura offline.");
+              continue;
+            }
+          } catch (e) {
+            console.warn("Não foi possível validar hash da foto offline:", e);
+          }
+
+          fotosParaEnviar.push(foto);
+        }
+
+        for (let i = 0; i < fotosParaEnviar.length; i++) {
+          const foto = fotosParaEnviar[i];
           const ano = new Date().getFullYear();
           const mes = String(new Date().getMonth() + 1).padStart(2, "0");
           const nomeSeguro = `${Date.now()}-${i + 1}.webp`;
           const path = `fotos/${ano}/${mes}/${aprNumero || aprId}/${nomeSeguro}`;
 
           const { error: uploadError } = await supabaseClient.storage.from("apr-arquivos").upload(path, foto.blob, {
-            contentType: "image/webp",
+            contentType: foto.mime_type || "image/webp",
             upsert: false
           });
           if (uploadError) throw uploadError;
@@ -3852,12 +3881,12 @@
             descricao: "Foto de comprovação da APR enviada após criação offline",
             storage_path: path,
             arquivo_nome: nomeSeguro,
-            mime_type: "image/webp",
-            tamanho_bytes: foto.tamanho_comprimido_bytes,
-            largura: foto.largura,
-            altura: foto.altura,
-            tamanho_original_bytes: foto.tamanho_original_bytes,
-            tamanho_comprimido_bytes: foto.tamanho_comprimido_bytes
+            mime_type: foto.mime_type || "image/webp",
+            tamanho_bytes: foto.tamanho_comprimido_bytes || foto.blob.size || null,
+            largura: foto.largura || null,
+            altura: foto.altura || null,
+            tamanho_original_bytes: foto.tamanho_original_bytes || null,
+            tamanho_comprimido_bytes: foto.tamanho_comprimido_bytes || foto.blob.size || null
           });
           if (dbError) throw dbError;
         }
@@ -5262,6 +5291,7 @@
       }
 
       item.tecnicos[idx].assinatura_offline = {
+        tipo_local: "assinatura",
         blob,
         mime_type: "image/png",
         hash,
