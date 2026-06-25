@@ -2117,6 +2117,16 @@
         .replaceAll("'", "&#039;");
     }
 
+    function escapeJsAttr(value) {
+      return String(value ?? "")
+        .replaceAll("\\", "\\\\")
+        .replaceAll("'", "\\'")
+        .replaceAll("
+", " ")
+        .replaceAll("
+", " ");
+    }
+
     function boolFromSelect(id) {
       return document.getElementById(id).value === "true";
     }
@@ -4518,8 +4528,16 @@
                     : `<span class="badge aguardando_assinaturas">Pendente</span>`}
                   ${formatarLocalizacaoAssinatura(t)}
                   <br>${htmlAsoTecnico(t)}
-                  ${t.assinatura_url ? `<br><img class="assinatura-img" src="${t.assinatura_url}" alt="Assinatura de ${escapeHtml(t.nome_tecnico)}">` : ""}
-                  ${t.selfie_url ? `<br><span class="small"><strong>Selfie da assinatura:</strong></span><br><img class="assinatura-img" src="${t.selfie_url}" alt="Selfie de ${escapeHtml(t.nome_tecnico)}">` : ""}
+                  ${t.assinatura_url ? `
+                    <br><span class="small"><strong>Assinatura:</strong></span><br>
+                    <img class="assinatura-img foto-clickable" src="${t.assinatura_url}" alt="Assinatura de ${escapeHtml(t.nome_tecnico)}" onclick="abrirVisualizadorFoto('${escapeJsAttr(t.assinatura_url)}', 'Assinatura - ${escapeJsAttr(t.nome_tecnico)}')">
+                    <br><button class="btn btn-light btn-mini" type="button" onclick="abrirVisualizadorFoto('${escapeJsAttr(t.assinatura_url)}', 'Assinatura - ${escapeJsAttr(t.nome_tecnico)}')">Ver assinatura</button>
+                  ` : ""}
+                  ${t.selfie_url ? `
+                    <br><span class="small"><strong>Selfie da assinatura:</strong></span><br>
+                    <img class="assinatura-img foto-clickable" src="${t.selfie_url}" alt="Selfie de ${escapeHtml(t.nome_tecnico)}" onclick="abrirVisualizadorFoto('${escapeJsAttr(t.selfie_url)}', 'Selfie - ${escapeJsAttr(t.nome_tecnico)}')">
+                    <br><button class="btn btn-light btn-mini" type="button" onclick="abrirVisualizadorFoto('${escapeJsAttr(t.selfie_url)}', 'Selfie - ${escapeJsAttr(t.nome_tecnico)}')">Ver selfie</button>
+                  ` : (t.assinado ? `<br><span class="small"><strong>Selfie:</strong> não registrada</span>` : "")}
                 </div>
                 <div class="row-actions">
                   ${!t.assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinaturaPorIndice('${apr.id}', ${idx})">Assinar ${escapeHtml(t.nome_tecnico || 'técnico')}</button>` : ""}
