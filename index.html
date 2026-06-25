@@ -2042,6 +2042,7 @@
     let fotosExistentesApr = [];
     let assinaturaAprAtual = null;
     let assinaturaSelfieAtual = null;
+    let detalhesAssinaturaCache = {};
     let signatureState = { drawing: false, signed: false, canvasReady: false };
 
     document.addEventListener("DOMContentLoaded", async () => {
@@ -4486,6 +4487,8 @@
         });
       }
 
+      detalhesAssinaturaCache[apr.id] = tecsComAssinatura;
+
       const meuVinculo = tecsComAssinatura.find(t => t.usuario_id === usuarioAtual.id);
       const possoAssinar = perfilAtual?.perfil !== "admin" && meuVinculo && !meuVinculo.assinado;
 
@@ -4506,7 +4509,7 @@
         <div class="form-section">
           <h4>Técnicos envolvidos e assinaturas</h4>
           <div class="assinatura-status-list">
-            ${tecsComAssinatura.length ? tecsComAssinatura.map(t => `
+            ${tecsComAssinatura.length ? tecsComAssinatura.map((t, idx) => `
               <div class="assinatura-status-card">
                 <div>
                   <strong>${escapeHtml(t.nome_tecnico)}</strong> ${t.responsavel ? "<span class='small'>(Responsável)</span>" : ""}<br>
@@ -4519,7 +4522,7 @@
                   ${t.selfie_url ? `<br><span class="small"><strong>Selfie da assinatura:</strong></span><br><img class="assinatura-img" src="${t.selfie_url}" alt="Selfie de ${escapeHtml(t.nome_tecnico)}">` : ""}
                 </div>
                 <div class="row-actions">
-                  ${!t.assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinatura('${apr.id}', '${t.vinculo_id || t.id}', '${t.tecnico_cadastro_id || t.tecnico_id || ''}', ${JSON.stringify(t.nome_tecnico || t.nome || 'Técnico')})">Assinar ${escapeHtml(t.nome_tecnico || 'técnico')}</button>` : ""}
+                  ${!t.assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinaturaPorIndice('${apr.id}', ${idx})">Assinar ${escapeHtml(t.nome_tecnico || 'técnico')}</button>` : ""}
                 </div>
               </div>
             `).join("") : "<p>Nenhum técnico vinculado.</p>"}
@@ -5118,7 +5121,30 @@
       setTimeout(inicializarCanvasAssinatura, 80);
     }
 
-    async function abrirModalAssinatura(aprId, vinculoId = null, tecnicoCadastroId = null, nomeTecnicoFallback = null) {
+    async function abrirModalAssinaturaPorIndice(aprId, tecnicoIndex) {
+      const lista = detalhesAssinaturaCache[aprId] || [];
+      let vinculoSelecionado = lista[Number(tecnicoIndex)];
+
+      if (!vinculoSelecionado) {
+        await verDetalhesApr(aprId);
+        vinculoSelecionado = (detalhesAssinaturaCache[aprId] || [])[Number(tecnicoIndex)];
+      }
+
+      if (!vinculoSelecionado) {
+        alert("Técnico não encontrado nesta APR para assinatura. Atualize a página e tente novamente.");
+        return;
+      }
+
+      await abrirModalAssinatura(
+        aprId,
+        vinculoSelecionado.vinculo_id || vinculoSelecionado.id || null,
+        vinculoSelecionado.tecnico_cadastro_id || vinculoSelecionado.tecnico_id || null,
+        vinculoSelecionado.nome_tecnico || vinculoSelecionado.nome || "Técnico",
+        vinculoSelecionado
+      );
+    }
+
+    async function abrirModalAssinatura(aprId, vinculoId = null, tecnicoCadastroId = null, nomeTecnicoFallback = null, vinculoSelecionado = null) {
       clearMsg("assinaturaMsg");
       limparSelfieAssinatura(false);
 
@@ -5158,12 +5184,30 @@
       const tecnicoIdRecebido = String(tecnicoCadastroId || "").trim();
       const nomeRecebido = normalizarTexto(nomeTecnicoFallback);
 
-      if (vinculoId) {
+      if (vinculoSelecionado) {
+        const selVinculoId = String(vinculoSelecionado.vinculo_id || vinculoSelecionado.id || "").trim();
+        const selTecnicoId = String(vinculoSelecionado.tecnico_cadastro_id || vinculoSelecionado.tecnico_id || "").trim();
+        const selNome = normalizarTexto(vinculoSelecionado.nome_tecnico || vinculoSelecionado.nome || nomeTecnicoFallback);
+
+        const vinculoBanco = (vinculosApr || []).find(v =>
+          (selVinculoId && String(v.id || "") === selVinculoId) ||
+          (selTecnicoId && String(v.tecnico_id || "") === selTecnicoId) ||
+          (selNome && normalizarTexto(v.nome_tecnico || v.nome) === selNome)
+        );
+
+        vinculo = {
+          ...(vinculoSelecionado || {}),
+          ...(vinculoBanco || {}),
+          id: vinculoBanco?.id || vinculoSelecionado.vinculo_id || vinculoSelecionado.id || null,
+          tecnico_id: vinculoBanco?.tecnico_id || vinculoSelecionado.tecnico_cadastro_id || vinculoSelecionado.tecnico_id || null,
+          nome_tecnico: vinculoBanco?.nome_tecnico || vinculoSelecionado.nome_tecnico || vinculoSelecionado.nome || nomeTecnicoFallback || "Técnico"
+        };
+      } else if (vinculoId) {
         vinculo = (vinculosApr || []).find(v =>
           String(v.id || "") === idRecebido ||
           String(v.tecnico_id || "") === idRecebido ||
           (tecnicoIdRecebido && String(v.tecnico_id || "") === tecnicoIdRecebido) ||
-          (nomeRecebido && normalizarTexto(v.nome_tecnico) === nomeRecebido)
+          (nomeRecebido && normalizarTexto(v.nome_tecnico || v.nome) === nomeRecebido)
         );
       } else {
         vinculo = (vinculosApr || []).find(v => v.usuario_id === usuarioAtual.id);
@@ -5573,7 +5617,8 @@
       const mes = String(agora.getMonth() + 1).padStart(2, "0");
       const nomeArquivo = `${Date.now()}-${usuarioAtual.id}.png`;
       const path = `assinaturas/${ano}/${mes}/${apr.numero_apr || apr.id}/${nomeArquivo}`;
-      const nomeArquivoSelfie = `${Date.now()}-${vinculo.id}-selfie.webp`;
+      const refTecnicoAssinatura = String(vinculo.id || vinculo.tecnico_id || vinculo.nome_tecnico || "tecnico").replace(/[^a-zA-Z0-9_-]+/g, "-");
+      const nomeArquivoSelfie = `${Date.now()}-${refTecnicoAssinatura}-selfie.webp`;
       const pathSelfie = `selfies_assinatura/${ano}/${mes}/${apr.numero_apr || apr.id}/${nomeArquivoSelfie}`;
 
       const { error: uploadError } = await supabaseClient
@@ -5602,30 +5647,59 @@
         return;
       }
 
-      const { error: updateError } = await supabaseClient
-        .from("apr_tecnicos")
-        .update({
-          assinado: true,
-          assinatura_pendente: false,
-          assinatura_storage_path: path,
-          assinatura_mime_type: "image/png",
-          assinatura_hash: hash,
-          assinatura_selfie_storage_path: pathSelfie,
-          assinatura_selfie_mime_type: assinaturaSelfieAtual.mime_type || "image/webp",
-          assinatura_selfie_hash: assinaturaSelfieAtual.hash || null,
-          assinado_em: agora.toISOString(),
-          assinatura_latitude: localizacao.latitude,
-          assinatura_longitude: localizacao.longitude,
-          assinatura_precisao_metros: localizacao.precisao,
-          assinatura_localizacao_capturada_em: localizacao.capturadaEm,
-          user_agent_assinatura: navigator.userAgent || null
-        })
-        .eq("id", vinculo.id);
+      const payloadAssinaturaBanco = {
+        assinado: true,
+        assinatura_pendente: false,
+        assinatura_storage_path: path,
+        assinatura_mime_type: "image/png",
+        assinatura_hash: hash,
+        assinatura_selfie_storage_path: pathSelfie,
+        assinatura_selfie_mime_type: assinaturaSelfieAtual.mime_type || "image/webp",
+        assinatura_selfie_hash: assinaturaSelfieAtual.hash || null,
+        assinado_em: agora.toISOString(),
+        assinatura_latitude: localizacao.latitude,
+        assinatura_longitude: localizacao.longitude,
+        assinatura_precisao_metros: localizacao.precisao,
+        assinatura_localizacao_capturada_em: localizacao.capturadaEm,
+        user_agent_assinatura: navigator.userAgent || null
+      };
+
+      let updateQuery = supabaseClient.from("apr_tecnicos").update(payloadAssinaturaBanco);
+
+      if (vinculo.id) {
+        updateQuery = updateQuery.eq("id", vinculo.id);
+      } else if (vinculo.tecnico_id) {
+        updateQuery = updateQuery.eq("apr_id", apr.id).eq("tecnico_id", vinculo.tecnico_id);
+      } else {
+        updateQuery = updateQuery.eq("apr_id", apr.id).eq("nome_tecnico", vinculo.nome_tecnico || vinculo.nome || "");
+      }
+
+      let { data: updateData, error: updateError } = await updateQuery.select("id, nome_tecnico, tecnico_id");
+
+      if ((!updateData || updateData.length === 0) && (vinculo.nome_tecnico || vinculo.nome)) {
+        const nomeBusca = vinculo.nome_tecnico || vinculo.nome;
+        const tentativaNome = await supabaseClient
+          .from("apr_tecnicos")
+          .update(payloadAssinaturaBanco)
+          .eq("apr_id", apr.id)
+          .ilike("nome_tecnico", nomeBusca)
+          .select("id, nome_tecnico, tecnico_id");
+
+        updateData = tentativaNome.data;
+        updateError = tentativaNome.error;
+      }
 
       if (updateError) {
         setMsg("assinaturaMsg", "err", "Assinatura enviada, mas erro ao salvar no banco: " + updateError.message);
         return;
       }
+
+      if (!updateData || updateData.length === 0) {
+        setMsg("assinaturaMsg", "err", "Assinatura enviada, mas não localizei o vínculo do técnico para marcar como assinado. Abra a APR novamente e tente pelo botão do técnico.");
+        return;
+      }
+
+      vinculo.id = updateData[0].id || vinculo.id;
 
       await supabaseClient.from("apr_linha_tempo").insert({
         apr_id: apr.id,
