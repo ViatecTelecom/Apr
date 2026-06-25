@@ -4657,6 +4657,8 @@
       const tecsComAssinatura = [];
       for (const t of (tecs || [])) {
         let assinatura_url = "";
+        let selfie_url = "";
+
         if (t.assinatura_storage_path) {
           const { data: signedAss } = await supabaseClient
             .storage
@@ -4664,8 +4666,23 @@
             .createSignedUrl(t.assinatura_storage_path, 60 * 60);
           assinatura_url = signedAss?.signedUrl || "";
         }
+
+        if (t.assinatura_selfie_storage_path) {
+          const { data: signedSelfie } = await supabaseClient
+            .storage
+            .from("apr-arquivos")
+            .createSignedUrl(t.assinatura_selfie_storage_path, 60 * 60);
+          selfie_url = signedSelfie?.signedUrl || "";
+        }
+
         const cadastroTec = t.tecnico_id ? mapaTecnicosCadastro.get(t.tecnico_id) : null;
-        tecsComAssinatura.push({ ...t, ...cadastroTec, nome_tecnico: t.nome_tecnico, assinatura_url });
+        tecsComAssinatura.push({
+          ...t,
+          ...cadastroTec,
+          nome_tecnico: t.nome_tecnico,
+          assinatura_url,
+          selfie_url
+        });
       }
 
       const nomeArquivo = `APR-${apr.numero_apr || apr.numero_os || apr.id}`.replaceAll("/", "-").replaceAll(" ", "-");
@@ -4694,7 +4711,10 @@
             .foto-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
             .foto { border: 1px solid #d0d5dd; border-radius: 8px; padding: 6px; page-break-inside: avoid; }
             .foto img { width: 100%; max-height: 230px; object-fit: contain; }
-            .assinatura-img { max-width: 220px; max-height: 90px; border: 1px solid #d0d5dd; margin-top: 6px; }
+            .assinatura-img { max-width: 220px; max-height: 90px; border: 1px solid #d0d5dd; margin-top: 6px; object-fit: contain; background: #fff; }
+            .selfie-img { width: 86px; height: 86px; border: 1px solid #d0d5dd; border-radius: 10px; object-fit: cover; background: #fff; margin-top: 6px; display: block; }
+            .assinatura-cell { min-width: 170px; }
+            .selfie-label { font-size: 10px; font-weight: 700; color: #344054; margin-top: 8px; display: block; }
             @media print { body { margin: 12mm; } button { display: none; } .page-break { page-break-before: always; } }
         
 
@@ -4934,14 +4954,17 @@
 
           <h2>Técnicos e assinaturas</h2>
           <table>
-            <thead><tr><th>Técnico</th><th>Cargo</th><th>Status</th><th>Assinatura</th></tr></thead>
+            <thead><tr><th>Técnico</th><th>Cargo</th><th>Status</th><th>Assinatura / Selfie</th></tr></thead>
             <tbody>
               ${tecsComAssinatura.map(t => `
                 <tr>
                   <td>${escapeHtml(t.nome_tecnico || "-")} ${t.responsavel ? "(Responsável)" : ""}</td>
                   <td>${escapeHtml(t.cargo || "-")}<br>${htmlAsoTecnico(t)}</td>
                   <td>${t.assinado ? `<span class="badge ok">Assinado</span><br>${formatarData(t.assinado_em)}${formatarLocalizacaoAssinatura(t)}` : `<span class="badge pend">Pendente</span>`}</td>
-                  <td>${t.assinatura_url ? `<img class="assinatura-img" src="${t.assinatura_url}">` : "-"}</td>
+                  <td class="assinatura-cell">
+                    ${t.assinatura_url ? `<span class="selfie-label">Assinatura</span><img class="assinatura-img" src="${t.assinatura_url}">` : "-"}
+                    ${t.selfie_url ? `<span class="selfie-label">Selfie</span><img class="selfie-img" src="${t.selfie_url}">` : `<span class="selfie-label">Selfie: não registrada</span>`}
+                  </td>
                 </tr>
               `).join("")}
             </tbody>
