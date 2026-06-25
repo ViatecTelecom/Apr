@@ -4528,13 +4528,13 @@
                   <br>${htmlAsoTecnico(t)}
                   ${t.assinatura_url ? `
                     <br><span class="small"><strong>Assinatura:</strong></span><br>
-                    <img class="assinatura-img foto-clickable" src="${t.assinatura_url}" alt="Assinatura de ${escapeHtml(t.nome_tecnico)}" onclick="abrirVisualizadorFoto('${escapeJsAttr(t.assinatura_url)}', 'Assinatura - ${escapeJsAttr(t.nome_tecnico)}')">
-                    <br><button class="btn btn-light btn-mini" type="button" onclick="abrirVisualizadorFoto('${escapeJsAttr(t.assinatura_url)}', 'Assinatura - ${escapeJsAttr(t.nome_tecnico)}')">Ver assinatura</button>
+                    <img class="assinatura-img foto-clickable" src="${t.assinatura_url}" alt="Assinatura de ${escapeHtml(t.nome_tecnico)}" onclick="abrirVisualizadorAssinaturaApr('${apr.id}', ${idx}, 'assinatura')">
+                    <br><button class="btn btn-light btn-mini" type="button" onclick="abrirVisualizadorAssinaturaApr('${apr.id}', ${idx}, 'assinatura')">Ver assinatura</button>
                   ` : ""}
                   ${t.selfie_url ? `
                     <br><span class="small"><strong>Selfie da assinatura:</strong></span><br>
-                    <img class="assinatura-img foto-clickable" src="${t.selfie_url}" alt="Selfie de ${escapeHtml(t.nome_tecnico)}" onclick="abrirVisualizadorFoto('${escapeJsAttr(t.selfie_url)}', 'Selfie - ${escapeJsAttr(t.nome_tecnico)}')">
-                    <br><button class="btn btn-light btn-mini" type="button" onclick="abrirVisualizadorFoto('${escapeJsAttr(t.selfie_url)}', 'Selfie - ${escapeJsAttr(t.nome_tecnico)}')">Ver selfie</button>
+                    <img class="assinatura-img foto-clickable" src="${t.selfie_url}" alt="Selfie de ${escapeHtml(t.nome_tecnico)}" onclick="abrirVisualizadorAssinaturaApr('${apr.id}', ${idx}, 'selfie')">
+                    <br><button class="btn btn-light btn-mini" type="button" onclick="abrirVisualizadorAssinaturaApr('${apr.id}', ${idx}, 'selfie')">Ver selfie</button>
                   ` : (t.assinado ? `<br><span class="small"><strong>Selfie:</strong> não registrada</span>` : "")}
                 </div>
                 <div class="row-actions">
@@ -4583,6 +4583,26 @@
       if (link) link.href = url || "#";
 
       modal.classList.remove("hidden");
+    }
+
+    function abrirVisualizadorAssinaturaApr(aprId, indice, tipo) {
+      const lista = detalhesAssinaturaCache?.[aprId] || [];
+      const tecnico = lista[indice];
+      if (!tecnico) {
+        alert("Não encontrei essa assinatura na APR. Feche e abra a APR novamente.");
+        return;
+      }
+
+      const nome = tecnico.nome_tecnico || tecnico.nome || "Técnico";
+      const url = tipo === "selfie" ? tecnico.selfie_url : tecnico.assinatura_url;
+      const titulo = tipo === "selfie" ? `Selfie - ${nome}` : `Assinatura - ${nome}`;
+
+      if (!url) {
+        alert(tipo === "selfie" ? "Selfie não registrada para este técnico." : "Assinatura não registrada para este técnico.");
+        return;
+      }
+
+      abrirVisualizadorFoto(url, titulo);
     }
 
     function fecharVisualizadorFoto() {
@@ -4657,6 +4677,7 @@
       }
 
       const { data: tecs } = await supabaseClient.from("apr_tecnicos").select("*").eq("apr_id", aprId).order("nome_tecnico");
+      const mapaTecnicosCadastro = new Map((tecnicosCache || []).map(t => [t.id, t]));
       const { data: respostas } = await supabaseClient.from("apr_checklist_respostas").select("*").eq("apr_id", aprId).order("ordem");
       const { data: fotos } = await supabaseClient.from("apr_fotos").select("*").eq("apr_id", aprId).order("enviada_em", { ascending: true });
 
