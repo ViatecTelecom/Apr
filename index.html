@@ -1984,7 +1984,8 @@
         <h4>Selfie do técnico</h4>
         <p class="small">Tire uma selfie no momento da assinatura para comprovar quem assinou a APR.</p>
         <div class="row-actions">
-          <label class="btn btn-green" for="inputSelfieAssinatura">Tirar selfie</label>
+          <button class="btn btn-green" type="button" onclick="abrirCameraSelfieAssinatura()">Tirar selfie</button>
+          <label class="btn btn-light" for="inputSelfieAssinatura">Selecionar selfie</label>
           <button class="btn btn-light" type="button" onclick="limparSelfieAssinatura()">Limpar selfie</button>
         </div>
         <input id="inputSelfieAssinatura" class="foto-input" type="file" accept="image/*" capture="user" onchange="selecionarSelfieAssinatura(event)">
@@ -4359,7 +4360,7 @@
                 <button class="btn btn-light btn-mini" onclick="verDetalhesApr('${apr.id}')">Ver</button>
                 ${perfilAtual?.perfil === 'admin'
                   ? (podeEditar ? `<button class="btn btn-primary btn-mini" onclick="editarApr('${apr.id}')">Editar</button>` : `<button class="btn btn-light btn-mini" disabled>Bloqueada</button>`)
-                  : `<button class="btn btn-primary btn-mini" onclick="abrirAssinaturaPorApr('${apr.id}')">Assinar</button>`}
+                  : `<button class="btn btn-primary btn-mini" onclick="verDetalhesApr('${apr.id}')">Ver / assinar</button>`}
               </div>
             </td>
           </tr>
@@ -5039,7 +5040,7 @@
             ${assinado ? `<p class="small">Assinada em: ${formatarData(vinc.assinado_em)}</p>` : ''}
             <div class="row-actions">
               <button class="btn btn-light btn-mini" onclick="verDetalhesApr('${apr.id}')">Ver APR</button>
-              ${!assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinatura('${apr.id}')">Assinar digitalmente</button>` : ''}
+              ${!assinado ? `<button class="btn btn-primary btn-mini" onclick="verDetalhesApr('${apr.id}')">Ver técnicos / assinar</button>` : ''}
             </div>
           </div>
         `;
@@ -5047,29 +5048,10 @@
     }
 
     async function abrirAssinaturaPorApr(aprId) {
-      const { data: vinculo, error } = await supabaseClient
-        .from("apr_tecnicos")
-        .select("*")
-        .eq("apr_id", aprId)
-        .eq("usuario_id", usuarioAtual.id)
-        .maybeSingle();
-
-      if (error) {
-        alert("Erro ao verificar assinatura: " + error.message);
-        return;
-      }
-
-      if (!vinculo) {
-        alert("Esta APR não está vinculada ao seu usuário para assinatura.");
-        return;
-      }
-
-      if (vinculo.assinado) {
-        alert("Você já assinou esta APR.");
-        return;
-      }
-
-      abrirModalAssinatura(aprId);
+      // Fluxo novo: assinatura online no mesmo aparelho.
+      // Em vez de procurar somente o vínculo do usuário logado, abre os detalhes da APR,
+      // onde aparecem todos os técnicos pendentes com botão “Assinar nome”.
+      await verDetalhesApr(aprId);
     }
 
     async function abrirModalAssinaturaOffline(offlineId, tecnicoIndex = null) {
@@ -5271,6 +5253,15 @@
           </div>
         </div>
       `;
+    }
+
+    function abrirCameraSelfieAssinatura() {
+      const input = document.getElementById("inputSelfieAssinatura");
+      if (!input) {
+        alert("Campo de selfie não encontrado na tela de assinatura.");
+        return;
+      }
+      input.click();
     }
 
     async function selecionarSelfieAssinatura(event) {
