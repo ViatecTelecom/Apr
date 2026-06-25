@@ -5163,26 +5163,77 @@
     }
 
     async function abrirModalAssinaturaPorIndice(aprId, tecnicoIndex) {
-      const lista = detalhesAssinaturaCache[aprId] || [];
+      clearMsg("assinaturaMsg");
+      limparSelfieAssinatura(false);
+
+      let lista = detalhesAssinaturaCache[aprId] || [];
       let vinculoSelecionado = lista[Number(tecnicoIndex)];
 
       if (!vinculoSelecionado) {
         await verDetalhesApr(aprId);
-        vinculoSelecionado = (detalhesAssinaturaCache[aprId] || [])[Number(tecnicoIndex)];
+        lista = detalhesAssinaturaCache[aprId] || [];
+        vinculoSelecionado = lista[Number(tecnicoIndex)];
       }
 
       if (!vinculoSelecionado) {
-        alert("Técnico não encontrado nesta APR para assinatura. Atualize a página e tente novamente.");
+        alert("Técnico não encontrado nesta APR para assinatura. Feche e abra a APR novamente.");
         return;
       }
 
-      await abrirModalAssinatura(
-        aprId,
-        vinculoSelecionado.vinculo_id || vinculoSelecionado.id || null,
-        vinculoSelecionado.tecnico_cadastro_id || vinculoSelecionado.tecnico_id || null,
-        vinculoSelecionado.nome_tecnico || vinculoSelecionado.nome || "Técnico",
-        vinculoSelecionado
-      );
+      const vinculoParaAssinar = {
+        ...vinculoSelecionado,
+        id: vinculoSelecionado.vinculo_id || vinculoSelecionado.id || null,
+        tecnico_id: vinculoSelecionado.tecnico_cadastro_id || vinculoSelecionado.tecnico_id || null,
+        nome_tecnico: vinculoSelecionado.nome_tecnico || vinculoSelecionado.nome || "Técnico"
+      };
+
+      if (!vinculoParaAssinar.id && !vinculoParaAssinar.tecnico_id && !vinculoParaAssinar.nome_tecnico) {
+        console.warn("Vínculo inválido para assinatura", { aprId, tecnicoIndex, vinculoSelecionado, lista });
+        alert("Não consegui identificar o técnico dentro desta APR. Atualize a página e tente novamente.");
+        return;
+      }
+
+      if (vinculoParaAssinar.assinado) {
+        alert("Esta APR já foi assinada por este técnico.");
+        return;
+      }
+
+      const { data: apr, error: aprError } = await supabaseClient
+        .from("aprs")
+        .select("*")
+        .eq("id", aprId)
+        .single();
+
+      if (aprError || !apr) {
+        alert("Erro ao carregar APR para assinatura.");
+        return;
+      }
+
+      const fotosComUrl = await buscarFotosComUrlApr(aprId);
+      assinaturaAprAtual = { apr, vinculo: vinculoParaAssinar };
+
+      document.getElementById("assinaturaAprInfo").innerHTML = `
+        <h4>${escapeHtml(apr.numero_apr || 'APR')}</h4>
+        <p><strong>Técnico que está assinando:</strong> ${escapeHtml(vinculoParaAssinar.nome_tecnico || '-')}</p>
+        <p class="small"><strong>Assinatura no mesmo aparelho:</strong> confira o nome do técnico antes de coletar a selfie e assinatura.</p>
+        <p><strong>OS:</strong> ${escapeHtml(apr.numero_os || '-')}</p>
+        <p><strong>Cliente:</strong> ${escapeHtml(apr.cliente_nome || '-')}</p>
+        <p><strong>Atividade:</strong> ${escapeHtml(apr.descricao_atividade || '-')}</p>
+        <p class="small"><strong>Localização:</strong> ao confirmar a assinatura, o navegador irá solicitar permissão para capturar a localização do técnico e registrar junto da APR.</p>
+
+        <div class="assinatura-fotos-box">
+          <h4 style="margin-top:0;">Fotos da APR</h4>
+          <p class="small">Confira as fotos antes de assinar. Clique para ampliar.</p>
+          ${htmlFotosApr(fotosComUrl, true)}
+        </div>
+      `;
+
+      const check = document.getElementById("checkDeclaracaoAssinatura");
+      if (check) check.checked = false;
+
+      renderSelfieAssinaturaPreview();
+      document.getElementById("modalAssinaturaApr").classList.remove("hidden");
+      setTimeout(inicializarCanvasAssinatura, 80);
     }
 
     async function abrirModalAssinatura(aprId, vinculoId = null, tecnicoCadastroId = null, nomeTecnicoFallback = null, vinculoSelecionado = null) {
