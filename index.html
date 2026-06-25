@@ -1375,6 +1375,27 @@
       font-weight: 700;
     }
 
+
+    .aso-file-box {
+      border: 1px dashed #b8c4d6;
+      background: #f8fafc;
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 8px;
+    }
+
+    .aso-file-box strong {
+      color: var(--azul-escuro);
+    }
+
+    .aso-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      align-items: center;
+    }
+
   </style>
 </head>
 
@@ -1769,6 +1790,17 @@
               </div>
 
               <div class="field">
+                <label>Arquivo do ASO</label>
+                <div class="row-actions">
+                  <label class="btn btn-light" for="tecAsoArquivo">Anexar ASO</label>
+                  <button class="btn btn-light" type="button" onclick="limparAsoArquivoPendente()">Limpar seleção</button>
+                </div>
+                <input id="tecAsoArquivo" class="foto-input" type="file" accept="application/pdf,image/*" onchange="selecionarAsoArquivoTecnico(event)">
+                <div id="tecAsoArquivoInfo" class="aso-file-box">Nenhum arquivo selecionado/anexado.</div>
+                <p class="small">Aceita PDF ou imagem. O arquivo fica salvo no Storage em <strong>asos/</strong>.</p>
+              </div>
+
+              <div class="field">
                 <label>Status</label>
                 <select id="tecAtivo">
                   <option value="true">Ativo</option>
@@ -2042,6 +2074,7 @@
     let fotosExistentesApr = [];
     let assinaturaAprAtual = null;
     let assinaturaSelfieAtual = null;
+    let asoArquivoPendenteTecnico = null;
     let detalhesAssinaturaCache = {};
     let signatureState = { drawing: false, signed: false, canvasReady: false };
 
@@ -2556,7 +2589,147 @@
     function htmlAsoTecnico(t) {
       const aso = statusAsoTecnico(t);
       const obs = t?.aso_observacao ? `<br><span class="small">${escapeHtml(t.aso_observacao)}</span>` : "";
-      return `<span class="badge ${aso.classe}">${aso.texto}</span><br><span class="small">${escapeHtml(aso.detalhe || "Informe a validade no cadastro do técnico.")}</span>${obs}`;
+      const arquivo = t?.aso_storage_path
+        ? `<br><button class="btn btn-light btn-mini" type="button" onclick="abrirAsoTecnico('${escapeJsAttr(t.aso_storage_path)}')">Ver ASO</button>`
+        : `<br><span class="small danger-text">Arquivo do ASO não anexado.</span>`;
+
+      return `<span class="badge ${aso.classe}">${aso.texto}</span><br><span class="small">${escapeHtml(aso.detalhe || "Informe a validade no cadastro do técnico.")}</span>${obs}${arquivo}`;
+    }
+
+    async function abrirAsoTecnico(storagePath) {
+      if (!storagePath) {
+        alert("ASO não anexado para este técnico.");
+        return;
+      }
+
+      try {
+        const { data, error } = await supabaseClient
+          .storage
+          .from("apr-arquivos")
+          .createSignedUrl(storagePath, 60 * 60);
+
+        if (error || !data?.signedUrl) throw error || new Error("Não foi possível gerar o link do ASO.");
+
+        window.open(data.signedUrl, "_blank");
+      } catch (err) {
+        alert("Erro ao abrir ASO: " + (err.message || err));
+      }
+    }
+
+    function renderAsoArquivoTecnico(t = null) {
+      const box = document.getElementById("tecAsoArquivoInfo");
+      if (!box) return;
+
+      if (asoArquivoPendenteTecnico) {
+        box.innerHTML = `
+          <strong>Arquivo selecionado:</strong> ${escapeHtml(asoArquivoPendenteTecnico.name)}<br>
+          <span class="small">${escapeHtml(asoArquivoPendenteTecnico.type || "arquivo")} • ${Math.round((asoArquivoPendenteTecnico.size || 0) / 1024)} KB</span>
+        `;
+        return;
+      }
+
+      if (t?.aso_storage_path) {
+        box.innerHTML = `
+          <strong>ASO anexado:</strong> ${escapeHtml(t.aso_nome_arquivo || "Arquivo do ASO")}
+          <div class="aso-actions">
+            <button class="btn btn-light btn-mini" type="button" onclick="abrirAsoTecnico('${escapeJsAttr(t.aso_storage_path)}')">Ver ASO</button>
+            <button class="btn btn-danger btn-mini" type="button" onclick="removerAsoTecnicoAtual()">Remover ASO</button>
+          </div>
+        `;
+        return;
+      }
+
+      box.innerHTML = "Nenhum arquivo selecionado/anexado.";
+    }
+
+    function selecionarAsoArquivoTecnico(event) {
+      const file = event.target.files?.[0];
+      asoArquivoPendenteTecnico = file || null;
+      const id = document.getElementById("tecIdEditando")?.value;
+      const t = id ? tecnicosCache.find(x => x.id === id) : null;
+      renderAsoArquivoTecnico(t);
+    }
+
+    function limparAsoArquivoPendente() {
+      asoArquivoPendenteTecnico = null;
+      const input = document.getElementById("tecAsoArquivo");
+      if (input) input.value = "";
+      const id = document.getElementById("tecIdEditando")?.value;
+      const t = id ? tecnicosCache.find(x => x.id === id) : null;
+      renderAsoArquivoTecnico(t);
+    }
+
+    async function removerAsoTecnicoAtual() {
+      const id = document.getElementById("tecIdEditando")?.value;
+      if (!id) {
+        alert("Abra o técnico em edição para remover o ASO.");
+        return;
+      }
+
+      const t = tecnicosCache.find(x => x.id === id);
+      if (!t?.aso_storage_path) {
+        alert("Este técnico não possui ASO anexado.");
+        return;
+      }
+
+      if (!confirm("Remover o arquivo ASO deste técnico?")) return;
+
+      const { error: storageError } = await supabaseClient.storage.from("apr-arquivos").remove([t.aso_storage_path]);
+      if (storageError) {
+        alert("Erro ao remover arquivo do Storage: " + storageError.message);
+        return;
+      }
+
+      const { error } = await supabaseClient
+        .from("tecnicos")
+        .update({
+          aso_storage_path: null,
+          aso_mime_type: null,
+          aso_nome_arquivo: null,
+          aso_enviado_em: null
+        })
+        .eq("id", id);
+
+      if (error) {
+        alert("Arquivo removido, mas erro ao atualizar técnico: " + error.message);
+        return;
+      }
+
+      asoArquivoPendenteTecnico = null;
+      const input = document.getElementById("tecAsoArquivo");
+      if (input) input.value = "";
+      await carregarTecnicos();
+      const atualizado = tecnicosCache.find(x => x.id === id);
+      renderAsoArquivoTecnico(atualizado);
+      setMsg("tecMsg", "ok", "ASO removido com sucesso.");
+    }
+
+    async function uploadAsoTecnico(tecnicoId, tecnicoNome) {
+      if (!asoArquivoPendenteTecnico) return null;
+
+      const file = asoArquivoPendenteTecnico;
+      const ext = (file.name.split(".").pop() || "pdf").toLowerCase().replace(/[^a-z0-9]/g, "") || "pdf";
+      const safeName = String(tecnicoNome || tecnicoId || "tecnico")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9_-]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .toLowerCase() || "tecnico";
+      const path = `asos/${tecnicoId}/${Date.now()}-${safeName}-aso.${ext}`;
+
+      const { error: uploadError } = await supabaseClient.storage.from("apr-arquivos").upload(path, file, {
+        contentType: file.type || "application/octet-stream",
+        upsert: false
+      });
+
+      if (uploadError) throw uploadError;
+
+      return {
+        aso_storage_path: path,
+        aso_mime_type: file.type || "application/octet-stream",
+        aso_nome_arquivo: file.name,
+        aso_enviado_em: new Date().toISOString()
+      };
     }
 
     function getTecnicosFiltradosCadastro() {
@@ -2685,6 +2858,10 @@
       document.getElementById("tecAsoValidade").value = t.aso_validade || "";
       document.getElementById("tecAsoObservacao").value = t.aso_observacao || "";
       document.getElementById("tecAtivo").value = String(!!t.ativo);
+      asoArquivoPendenteTecnico = null;
+      const inputAso = document.getElementById("tecAsoArquivo");
+      if (inputAso) inputAso.value = "";
+      renderAsoArquivoTecnico(t);
 
       document.getElementById("tituloFormTecnico").textContent = "Editando técnico";
       document.getElementById("btnSalvarTecnico").textContent = "Salvar alterações";
@@ -2703,6 +2880,10 @@
       document.getElementById("tecAsoValidade").value = "";
       document.getElementById("tecAsoObservacao").value = "";
       document.getElementById("tecAtivo").value = "true";
+      asoArquivoPendenteTecnico = null;
+      const inputAso = document.getElementById("tecAsoArquivo");
+      if (inputAso) inputAso.value = "";
+      renderAsoArquivoTecnico(null);
 
       document.getElementById("tituloFormTecnico").textContent = "Novo técnico";
       document.getElementById("btnSalvarTecnico").textContent = "Cadastrar técnico";
@@ -2763,25 +2944,50 @@
       };
 
       let error;
+      let tecnicoSalvoId = id || null;
 
       if (id) {
         const res = await supabaseClient
           .from("tecnicos")
           .update(payloadTecnico)
-          .eq("id", id);
+          .eq("id", id)
+          .select("id")
+          .single();
 
         error = res.error;
+        tecnicoSalvoId = res.data?.id || id;
       } else {
         const res = await supabaseClient
           .from("tecnicos")
-          .insert(payloadTecnico);
+          .insert(payloadTecnico)
+          .select("id")
+          .single();
 
         error = res.error;
+        tecnicoSalvoId = res.data?.id || null;
       }
 
       if (error) {
         setMsg("tecMsg", "err", "Erro ao salvar técnico: " + error.message);
         return;
+      }
+
+      if (asoArquivoPendenteTecnico && tecnicoSalvoId) {
+        try {
+          const asoPayload = await uploadAsoTecnico(tecnicoSalvoId, nome);
+          if (asoPayload) {
+            const { error: asoUpdateError } = await supabaseClient
+              .from("tecnicos")
+              .update(asoPayload)
+              .eq("id", tecnicoSalvoId);
+
+            if (asoUpdateError) throw asoUpdateError;
+          }
+        } catch (err) {
+          setMsg("tecMsg", "err", "Técnico salvo, mas erro ao enviar ASO: " + (err.message || err));
+          await carregarTecnicos();
+          return;
+        }
       }
 
       setMsg("tecMsg", "ok", id ? "Técnico atualizado com sucesso." : "Técnico cadastrado com sucesso.");
