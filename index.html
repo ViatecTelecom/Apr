@@ -2121,10 +2121,8 @@
       return String(value ?? "")
         .replaceAll("\\", "\\\\")
         .replaceAll("'", "\\'")
-        .replaceAll("
-", " ")
-        .replaceAll("
-", " ");
+        .replaceAll("\n", " ")
+        .replaceAll("\r", " ");
     }
 
     function boolFromSelect(id) {
