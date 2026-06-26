@@ -1376,55 +1376,56 @@
     }
 
 
-    .aso-file-box {
-      border: 1px dashed #b8c4d6;
-      background: #f8fafc;
-      border-radius: 14px;
-      padding: 12px;
-      margin-top: 8px;
+    .aso-doc-card {
+      border: 1px solid #e4e7ec;
+      background: #fff;
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 12px;
     }
 
-    .aso-file-box strong {
+    .aso-doc-card h4 {
+      margin: 0 0 8px;
       color: var(--azul-escuro);
     }
 
-    .aso-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-      align-items: center;
-    }
-
-
-    .aso-alert-list {
+    .aso-status-grid {
       display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 10px;
+      margin-top: 10px;
     }
 
-    .aso-alert-item {
+    .aso-status-item {
+      border: 1px solid #e4e7ec;
+      background: #fcfcfd;
+      border-radius: 14px;
+      padding: 11px;
+    }
+
+    .aso-resumo-apr {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: #f8fafc;
+      border: 1px solid #e4e7ec;
+      border-radius: 14px;
+      line-height: 1.45;
+    }
+
+    .aso-alerta-item {
       border: 1px solid #e4e7ec;
       border-radius: 14px;
       padding: 12px;
+      margin-bottom: 10px;
       background: #fff;
+    }
+
+    .doc-actions {
       display: flex;
-      justify-content: space-between;
-      gap: 12px;
+      gap: 8px;
       flex-wrap: wrap;
-      align-items: flex-start;
-    }
-
-    .aso-alert-item strong {
-      color: var(--azul-escuro);
-    }
-
-    .aso-alert-empty {
-      border: 1px dashed #abefc6;
-      color: #027a48;
-      background: #ecfdf3;
-      border-radius: 14px;
-      padding: 14px;
-      font-weight: 800;
+      align-items: center;
+      margin-top: 8px;
     }
 
   </style>
@@ -1497,6 +1498,8 @@
           <button id="navMinhasAssinaturas" onclick="showTab('minhasAssinaturas')">Minhas assinaturas</button>
           <button id="navOffline" onclick="showTab('offline')">Pendentes offline <span id="offlineNavCount" class="nav-count">0</span></button>
           <button id="navTecnicos" onclick="showTab('tecnicos')">Técnicos</button>
+          <button id="navAso" onclick="showTab('aso')">ASO / Exames</button>
+          <button id="navMeusDocumentos" onclick="showTab('meusDocumentos')">Meus documentos</button>
           <button id="navRegras" onclick="showTab('regras')">Regras da APR</button>
           <button onclick="logout()">Sair</button>
         </nav>
@@ -1536,28 +1539,10 @@
             </div>
           </div>
 
-          <div id="cardAlertasAso" class="card" style="margin-top:18px;">
-            <div class="topbar" style="margin-bottom:12px;">
-              <div>
-                <h3 style="margin:0;color:var(--azul-escuro);">Alertas de ASO</h3>
-                <p>Controle dos técnicos com ASO vencido, sem ASO ou vencendo em até 30 dias.</p>
-              </div>
-              <button class="btn btn-light btn-full-mobile" type="button" onclick="enviarAlertaAsoEmailManual()">Enviar alerta por e-mail</button>
-            </div>
-
-            <div class="grid grid-2" style="margin-bottom:12px;">
-              <div class="field" style="margin-bottom:0;">
-                <label>E-mail que receberá os alertas</label>
-                <input id="emailAlertaAso" type="email" placeholder="Ex: noc@viatectelecom.com.br" oninput="salvarEmailAlertaAsoLocal()">
-              </div>
-              <div class="field" style="margin-bottom:0;">
-                <label>Status</label>
-                <div id="resumoAlertasAso" class="small">Carregando alertas...</div>
-              </div>
-            </div>
-
+          <div id="cardAlertasAsoDashboard" class="card" style="margin-top:18px;">
+            <h3>Alertas de ASO / Exames ocupacionais</h3>
+            <p class="small">Documentos vencidos, vencendo em até 30 dias ou não informados.</p>
             <div id="listaAlertasAsoDashboard"></div>
-            <div id="alertaAsoMsg" class="msg"></div>
           </div>
         </section>
 
@@ -1833,27 +1818,9 @@
                 <p class="small">Crie primeiro o usuário em Authentication &gt; Users. Ao salvar, o sistema vincula este técnico ao login pelo e-mail.</p>
               </div>
 
-              <div class="grid grid-2">
-                <div class="field">
-                  <label>Validade do ASO</label>
-                  <input id="tecAsoValidade" type="date">
-                </div>
-                <div class="field">
-                  <label>Observação do ASO</label>
-                  <input id="tecAsoObservacao" placeholder="Ex.: apto, pendente, renovar...">
-                </div>
-              </div>
-
-              <div class="field">
-                <label>Arquivo do ASO</label>
-                <div class="row-actions">
-                  <label class="btn btn-light" for="tecAsoArquivo">Anexar ASO</label>
-                  <button class="btn btn-light" type="button" onclick="limparAsoArquivoPendente()">Limpar seleção</button>
-                </div>
-                <input id="tecAsoArquivo" class="foto-input" type="file" accept="application/pdf,image/*" onchange="selecionarAsoArquivoTecnico(event)">
-                <div id="tecAsoArquivoInfo" class="aso-file-box">Nenhum arquivo selecionado/anexado.</div>
-                <p class="small">Aceita PDF ou imagem. O arquivo fica salvo no Storage em <strong>asos/</strong>.</p>
-              </div>
+              <input id="tecAsoValidade" type="hidden">
+              <input id="tecAsoObservacao" type="hidden">
+              <p class="small">Os documentos de ASO, glicemia, eletrocardiograma e laudo psicossocial agora ficam na sessão <strong>ASO / Exames</strong>.</p>
 
               <div class="field">
                 <label>Status</label>
@@ -1934,6 +1901,54 @@
                 <div id="tecnicosInativosMobileList" class="mobile-card-list"></div>
               </div>
             </div>
+          </div>
+        </section>
+
+
+        <section id="tabAso" class="hidden">
+          <div class="topbar">
+            <div>
+              <h2>ASO / Exames ocupacionais</h2>
+              <p>Controle os exames ocupacionais vinculados a cada técnico.</p>
+            </div>
+          </div>
+
+          <div class="grid grid-2">
+            <div class="card">
+              <h3>Selecionar técnico</h3>
+              <div class="field">
+                <label>Técnico</label>
+                <select id="asoTecnicoSelect" onchange="renderAsoAdmin()">
+                  <option value="">Selecione um técnico</option>
+                </select>
+              </div>
+              <div id="asoResumoTecnico" class="aso-status-grid"></div>
+            </div>
+
+            <div class="card">
+              <h3>Alertas</h3>
+              <div id="asoAlertasAdmin"></div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:18px;">
+            <h3>Documentos do técnico</h3>
+            <p class="small">Informe a data do exame. O sistema calcula a validade padrão, mas você pode ajustar manualmente quando necessário.</p>
+            <div id="asoDocumentosAdmin"></div>
+          </div>
+        </section>
+
+        <section id="tabMeusDocumentos" class="hidden">
+          <div class="topbar">
+            <div>
+              <h2>Meus documentos</h2>
+              <p>Visualize e baixe seus documentos ocupacionais cadastrados pela administração.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Atestado de saúde ocupacional</h3>
+            <div id="meusDocumentosConteudo"></div>
           </div>
         </section>
 
@@ -2114,6 +2129,7 @@
     let usuarioAtual = null;
     let perfilAtual = null;
     let tecnicosCache = [];
+    let documentosOcupacionaisCache = [];
     let checklistModeloCache = [];
     let aprsCache = [];
     let modoOfflineAutenticado = false;
@@ -2129,9 +2145,14 @@
     let fotosExistentesApr = [];
     let assinaturaAprAtual = null;
     let assinaturaSelfieAtual = null;
-    let asoArquivoPendenteTecnico = null;
     let detalhesAssinaturaCache = {};
     let signatureState = { drawing: false, signed: false, canvasReady: false };
+
+    const TIPOS_DOCUMENTOS_OCUPACIONAIS = [
+      { tipo: "glicemia", nome: "Glicemia", anosValidade: 1 },
+      { tipo: "eletrocardiograma", nome: "Eletrocardiograma", anosValidade: 2 },
+      { tipo: "laudo_psicossocial", nome: "Laudo psicossocial", anosValidade: 2 }
+    ];
 
     document.addEventListener("DOMContentLoaded", async () => {
       carregarLoginSalvo();
@@ -2194,6 +2215,14 @@
     function formatarData(data) {
       if (!data) return "-";
       return new Date(data).toLocaleString("pt-BR");
+    }
+
+    function formatarDataSimples(data) {
+      if (!data) return "-";
+      const valor = String(data).slice(0, 10);
+      const partes = valor.split("-");
+      if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+      return formatarData(data);
     }
 
     function escapeHtml(value) {
@@ -2443,6 +2472,8 @@
       document.getElementById("navHistorico").style.display = isAdmin ? "block" : "none";
       document.getElementById("navNovaApr").style.display = "block";
       document.getElementById("navTecnicos").style.display = isAdmin ? "block" : "none";
+      document.getElementById("navAso").style.display = isAdmin ? "block" : "none";
+      document.getElementById("navMeusDocumentos").style.display = isAdmin ? "none" : "block";
       document.getElementById("navRegras").style.display = isAdmin ? "block" : "none";
       document.getElementById("navMinhasAssinaturas").style.display = isAdmin ? "none" : "block";
       document.getElementById("navOffline").style.display = "block";
@@ -2454,6 +2485,7 @@
 
     async function carregarDadosIniciais() {
       await carregarTecnicos();
+      await carregarDocumentosOcupacionais();
       await carregarChecklistModelo();
 
       if (navigator.onLine && !modoOfflineAutenticado) {
@@ -2505,7 +2537,7 @@
     }
 
     function showTab(tab) {
-      const tabs = ["Dashboard", "NovaApr", "Historico", "Tecnicos", "Regras", "MinhasAssinaturas", "Offline"];
+      const tabs = ["Dashboard", "NovaApr", "Historico", "Tecnicos", "Aso", "MeusDocumentos", "Regras", "MinhasAssinaturas", "Offline"];
       tabs.forEach(t => document.getElementById("tab" + t).classList.add("hidden"));
       document.querySelectorAll(".nav button").forEach(btn => btn.classList.remove("active"));
 
@@ -2539,7 +2571,19 @@
         carregarTecnicos();
       }
 
+      if (tab === "aso") {
+        if (perfilAtual?.perfil !== "admin") { alert("Somente admin pode acessar ASO / Exames."); return; }
+        document.getElementById("tabAso").classList.remove("hidden");
+        document.getElementById("navAso").classList.add("active");
+        carregarDocumentosOcupacionais().then(() => renderAsoAdmin());
+      }
 
+      if (tab === "meusDocumentos") {
+        if (perfilAtual?.perfil === "admin") { showTab("aso"); return; }
+        document.getElementById("tabMeusDocumentos").classList.remove("hidden");
+        document.getElementById("navMeusDocumentos").classList.add("active");
+        carregarDocumentosOcupacionais().then(() => renderMeusDocumentosOcupacionais());
+      }
 
       if (tab === "minhasAssinaturas") {
         document.getElementById("tabMinhasAssinaturas").classList.remove("hidden");
@@ -2597,6 +2641,7 @@
       renderTabelaTecnicos();
       renderTecnicosNovaApr();
       renderFiltroTecnicoHistorico();
+      renderSelectTecnicosAso();
       await atualizarDashboard();
     }
 
@@ -2629,309 +2674,418 @@
       carregarAprs();
     }
 
-    function statusAsoTecnico(t) {
-      const validade = t?.aso_validade;
-      if (!validade) return { classe: "aguardando_assinaturas", texto: "ASO não informado", detalhe: "" };
-
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-      const dataValidade = new Date(validade + "T00:00:00");
-      const diffDias = Math.ceil((dataValidade.getTime() - hoje.getTime()) / 86400000);
-
-      if (diffDias < 0) return { classe: "cancelada", texto: "ASO vencido", detalhe: `Venceu em ${formatarData(validade)}` };
-      if (diffDias <= 30) return { classe: "rascunho", texto: "ASO a vencer", detalhe: `Vence em ${formatarData(validade)}` };
-      return { classe: "finalizada", texto: "ASO válido", detalhe: `Válido até ${formatarData(validade)}` };
-    }
-
-    function htmlAsoTecnico(t) {
-      const aso = statusAsoTecnico(t);
-      const obs = t?.aso_observacao ? `<br><span class="small">${escapeHtml(t.aso_observacao)}</span>` : "";
-      const arquivo = t?.aso_storage_path
-        ? `<br><button class="btn btn-light btn-mini" type="button" onclick="abrirAsoTecnico('${escapeJsAttr(t.aso_storage_path)}')">Ver ASO</button>`
-        : `<br><span class="small danger-text">Arquivo do ASO não anexado.</span>`;
-
-      return `<span class="badge ${aso.classe}">${aso.texto}</span><br><span class="small">${escapeHtml(aso.detalhe || "Informe a validade no cadastro do técnico.")}</span>${obs}${arquivo}`;
-    }
-
-
-    function carregarEmailAlertaAsoLocal() {
-      const input = document.getElementById("emailAlertaAso");
-      if (!input) return;
-      input.value = localStorage.getItem("aprEmailAlertaAso") || "";
-    }
-
-    function salvarEmailAlertaAsoLocal() {
-      const input = document.getElementById("emailAlertaAso");
-      if (!input) return;
-      localStorage.setItem("aprEmailAlertaAso", input.value.trim());
-    }
-
-    function diasParaVencimentoAso(validade) {
-      if (!validade) return null;
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-      const dataValidade = new Date(validade + "T00:00:00");
-      return Math.ceil((dataValidade.getTime() - hoje.getTime()) / 86400000);
-    }
-
-    function listarAlertasAso() {
-      const lista = (tecnicosCache || [])
-        .filter(t => t.ativo)
-        .map(t => {
-          const dias = diasParaVencimentoAso(t.aso_validade);
-          const aso = statusAsoTecnico(t);
-          const semArquivo = !t.aso_storage_path;
-          let prioridade = 99;
-          let motivo = "";
-
-          if (!t.aso_validade) {
-            prioridade = 1;
-            motivo = "ASO sem validade informada";
-          } else if (dias < 0) {
-            prioridade = 0;
-            motivo = `ASO vencido há ${Math.abs(dias)} dia(s)`;
-          } else if (dias <= 15) {
-            prioridade = 2;
-            motivo = `ASO vence em ${dias} dia(s)`;
-          } else if (dias <= 30) {
-            prioridade = 3;
-            motivo = `ASO vence em ${dias} dia(s)`;
-          }
-
-          if (prioridade === 99 && semArquivo) {
-            prioridade = 4;
-            motivo = "Arquivo do ASO não anexado";
-          }
-
-          return { ...t, dias_aso: dias, aso_status: aso, aso_motivo_alerta: motivo, aso_prioridade_alerta: prioridade, aso_sem_arquivo: semArquivo };
-        })
-        .filter(t => t.aso_prioridade_alerta !== 99)
-        .sort((a, b) => {
-          if (a.aso_prioridade_alerta !== b.aso_prioridade_alerta) return a.aso_prioridade_alerta - b.aso_prioridade_alerta;
-          return String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR");
-        });
-
-      return lista;
-    }
-
-    function textoAlertaAsoEmail() {
-      const alertas = listarAlertasAso();
-      const hoje = new Date().toLocaleDateString("pt-BR");
-
-      if (!alertas.length) {
-        return `Olá,\n\nConsulta realizada em ${hoje}.\n\nNo momento não há técnicos ativos com ASO vencido, vencendo em até 30 dias, sem validade ou sem arquivo anexado.\n\nViaTec Telecom`;
-      }
-
-      const linhas = alertas.map(t => {
-        const validade = t.aso_validade ? new Date(t.aso_validade + "T00:00:00").toLocaleDateString("pt-BR") : "não informada";
-        const arquivo = t.aso_storage_path ? "arquivo anexado" : "arquivo não anexado";
-        const obs = t.aso_observacao ? `\n  Observação: ${t.aso_observacao}` : "";
-        return `- ${t.nome || "Técnico sem nome"}\n  Status: ${t.aso_motivo_alerta}\n  Validade: ${validade}\n  Arquivo: ${arquivo}${obs}`;
-      }).join("\n\n");
-
-      return `Olá,\n\nSegue alerta de ASO dos técnicos da APR Digital ViaTec.\n\n${linhas}\n\nAcesse o sistema APR Digital para atualizar as validades e anexos dos ASOs.\n\nViaTec Telecom`;
-    }
-
-    function renderAlertasAsoDashboard() {
-      carregarEmailAlertaAsoLocal();
-
-      const listaEl = document.getElementById("listaAlertasAsoDashboard");
-      const resumoEl = document.getElementById("resumoAlertasAso");
-      if (!listaEl || !resumoEl) return;
-
-      const alertas = listarAlertasAso();
-      const vencidos = alertas.filter(t => t.dias_aso !== null && t.dias_aso < 0).length;
-      const ate15 = alertas.filter(t => t.dias_aso !== null && t.dias_aso >= 0 && t.dias_aso <= 15).length;
-      const ate30 = alertas.filter(t => t.dias_aso !== null && t.dias_aso > 15 && t.dias_aso <= 30).length;
-      const semValidade = alertas.filter(t => !t.aso_validade).length;
-      const semArquivo = alertas.filter(t => t.aso_sem_arquivo).length;
-
-      resumoEl.innerHTML = `
-        <span class="badge cancelada">${vencidos} vencido(s)</span>
-        <span class="badge rascunho">${ate15 + ate30} a vencer</span>
-        <span class="badge aguardando_assinaturas">${semValidade} sem validade</span>
-        <span class="badge aguardando_assinaturas">${semArquivo} sem arquivo</span>
-      `;
-
-      if (!alertas.length) {
-        listaEl.innerHTML = `<div class="aso-alert-empty">Tudo certo. Nenhum técnico ativo com ASO vencido ou vencendo em até 30 dias.</div>`;
-        return;
-      }
-
-      listaEl.innerHTML = `<div class="aso-alert-list">` + alertas.map(t => {
-        const validade = t.aso_validade ? new Date(t.aso_validade + "T00:00:00").toLocaleDateString("pt-BR") : "Não informada";
-        const classe = t.dias_aso !== null && t.dias_aso < 0 ? "cancelada" : (t.dias_aso !== null && t.dias_aso <= 30 ? "rascunho" : "aguardando_assinaturas");
-        const telefone = t.telefone ? `<br><span class="small">Telefone: ${escapeHtml(t.telefone)}</span>` : "";
-        const arquivo = t.aso_storage_path
-          ? `<button class="btn btn-light btn-mini" type="button" onclick="abrirAsoTecnico('${escapeJsAttr(t.aso_storage_path)}')">Ver ASO</button>`
-          : `<span class="badge aguardando_assinaturas">Sem arquivo</span>`;
-
-        return `
-          <div class="aso-alert-item">
-            <div>
-              <strong>${escapeHtml(t.nome || "Técnico sem nome")}</strong><br>
-              <span class="badge ${classe}">${escapeHtml(t.aso_motivo_alerta)}</span><br>
-              <span class="small">Validade: ${escapeHtml(validade)}</span>${telefone}
-            </div>
-            <div class="row-actions">
-              ${arquivo}
-              <button class="btn btn-light btn-mini" type="button" onclick="editarTecnico('${escapeJsAttr(t.id)}'); showTab('tecnicos');">Editar técnico</button>
-            </div>
-          </div>
-        `;
-      }).join("") + `</div>`;
-    }
-
-    function enviarAlertaAsoEmailManual() {
-      clearMsg("alertaAsoMsg");
-      const email = document.getElementById("emailAlertaAso")?.value.trim();
-      if (!email) {
-        setMsg("alertaAsoMsg", "err", "Informe o e-mail que receberá o alerta de ASO.");
-        return;
-      }
-
-      salvarEmailAlertaAsoLocal();
-      const assunto = "Alerta de ASO - APR Digital ViaTec";
-      const corpo = textoAlertaAsoEmail();
-      const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
-      window.location.href = mailto;
-      setMsg("alertaAsoMsg", "ok", "Abrindo o e-mail com o alerta pronto. Confira e envie pelo seu aplicativo de e-mail.");
-    }
-
-    async function abrirAsoTecnico(storagePath) {
-      if (!storagePath) {
-        alert("ASO não anexado para este técnico.");
-        return;
+    async function carregarDocumentosOcupacionais() {
+      if (!navigator.onLine || modoOfflineAutenticado) {
+        documentosOcupacionaisCache = documentosOcupacionaisCache || [];
+        renderAlertasAsoDashboard();
+        return documentosOcupacionaisCache;
       }
 
       try {
         const { data, error } = await supabaseClient
-          .storage
-          .from("apr-arquivos")
-          .createSignedUrl(storagePath, 60 * 60);
+          .from("tecnicos_documentos_ocupacionais")
+          .select("*")
+          .order("validade", { ascending: true, nullsFirst: false });
 
-        if (error || !data?.signedUrl) throw error || new Error("Não foi possível gerar o link do ASO.");
-
-        window.open(data.signedUrl, "_blank");
+        if (error) throw error;
+        documentosOcupacionaisCache = data || [];
       } catch (err) {
-        alert("Erro ao abrir ASO: " + (err.message || err));
+        console.warn("Não foi possível carregar documentos ocupacionais. Rode o SQL da tabela tecnicos_documentos_ocupacionais.", err);
+        documentosOcupacionaisCache = documentosOcupacionaisCache || [];
       }
+
+      renderAlertasAsoDashboard();
+      return documentosOcupacionaisCache;
     }
 
-    function renderAsoArquivoTecnico(t = null) {
-      const box = document.getElementById("tecAsoArquivoInfo");
-      if (!box) return;
+    function tipoDocumentoInfo(tipo) {
+      return TIPOS_DOCUMENTOS_OCUPACIONAIS.find(x => x.tipo === tipo) || { tipo, nome: tipo || "Documento", anosValidade: 1 };
+    }
 
-      if (asoArquivoPendenteTecnico) {
-        box.innerHTML = `
-          <strong>Arquivo selecionado:</strong> ${escapeHtml(asoArquivoPendenteTecnico.name)}<br>
-          <span class="small">${escapeHtml(asoArquivoPendenteTecnico.type || "arquivo")} • ${Math.round((asoArquivoPendenteTecnico.size || 0) / 1024)} KB</span>
-        `;
-        return;
+    function getDocsTecnico(tecnicoId) {
+      if (!tecnicoId) return [];
+      return (documentosOcupacionaisCache || []).filter(d => d.tecnico_id === tecnicoId);
+    }
+
+    function getDocTecnicoPorTipo(tecnicoId, tipo) {
+      return getDocsTecnico(tecnicoId).find(d => d.tipo_documento === tipo) || null;
+    }
+
+    function getTecnicoIdParaDocumentos(t) {
+      return t?.tecnico_cadastro_id || t?.tecnico_id || t?.id || "";
+    }
+
+    function adicionarAnosData(data, anos) {
+      if (!data) return "";
+      const [ano, mes, dia] = String(data).slice(0, 10).split("-").map(Number);
+      if (!ano || !mes || !dia) return "";
+      const d = new Date(ano + anos, mes - 1, dia);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    function statusDocumentoOcupacional(doc) {
+      if (!doc || !doc.validade) {
+        return { classe: "aguardando_assinaturas", texto: "Não informado", detalhe: "Sem validade cadastrada", ordem: 3 };
       }
 
-      if (t?.aso_storage_path) {
-        box.innerHTML = `
-          <strong>ASO anexado:</strong> ${escapeHtml(t.aso_nome_arquivo || "Arquivo do ASO")}
-          <div class="aso-actions">
-            <button class="btn btn-light btn-mini" type="button" onclick="abrirAsoTecnico('${escapeJsAttr(t.aso_storage_path)}')">Ver ASO</button>
-            <button class="btn btn-danger btn-mini" type="button" onclick="removerAsoTecnicoAtual()">Remover ASO</button>
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const dataValidade = new Date(String(doc.validade).slice(0, 10) + "T00:00:00");
+      const diffDias = Math.ceil((dataValidade.getTime() - hoje.getTime()) / 86400000);
+
+      if (diffDias < 0) {
+        return { classe: "cancelada", texto: "Vencido", detalhe: `vencido em ${formatarDataSimples(doc.validade)}`, ordem: 3, diffDias };
+      }
+
+      if (diffDias <= 30) {
+        return { classe: "rascunho", texto: "Atenção", detalhe: `vence em ${diffDias} dia${diffDias === 1 ? "" : "s"}`, ordem: 2, diffDias };
+      }
+
+      return { classe: "finalizada", texto: "Válido", detalhe: `válido até ${formatarDataSimples(doc.validade)}`, ordem: 1, diffDias };
+    }
+
+    function statusGeralDocumentosTecnico(tecnicoId) {
+      const statusItens = TIPOS_DOCUMENTOS_OCUPACIONAIS.map(info => statusDocumentoOcupacional(getDocTecnicoPorTipo(tecnicoId, info.tipo)));
+      if (statusItens.some(s => s.ordem === 3)) return { classe: "cancelada", texto: "Irregular" };
+      if (statusItens.some(s => s.ordem === 2)) return { classe: "rascunho", texto: "Atenção" };
+      return { classe: "finalizada", texto: "Regular" };
+    }
+
+    function linhaResumoDocumentoOcupacional(tecnicoId, tipo) {
+      const info = tipoDocumentoInfo(tipo);
+      const doc = getDocTecnicoPorTipo(tecnicoId, tipo);
+      const st = statusDocumentoOcupacional(doc);
+
+      if (!doc || !doc.validade) return `${info.nome}: não informado`;
+      if (st.ordem === 3) return `${info.nome}: vencido em ${formatarDataSimples(doc.validade)}`;
+      if (st.ordem === 2) return `${info.nome}: vence em ${st.diffDias} dia${st.diffDias === 1 ? "" : "s"} (${formatarDataSimples(doc.validade)})`;
+      return `${info.nome}: válida até ${formatarDataSimples(doc.validade)}`;
+    }
+
+    function htmlAsoTecnico(t) {
+      const tecnicoId = getTecnicoIdParaDocumentos(t);
+      const geral = statusGeralDocumentosTecnico(tecnicoId);
+      return `<span class="badge ${geral.classe}">ASO / Exames: ${geral.texto}</span><br><span class="small">${TIPOS_DOCUMENTOS_OCUPACIONAIS.map(info => escapeHtml(linhaResumoDocumentoOcupacional(tecnicoId, info.tipo))).join("<br>")}</span>`;
+    }
+
+    function htmlResumoAsoApr(t) {
+      const tecnicoId = getTecnicoIdParaDocumentos(t);
+      const geral = statusGeralDocumentosTecnico(tecnicoId);
+      const nome = t?.nome_tecnico || t?.nome || "Técnico";
+
+      return `
+        <div class="aso-resumo-apr">
+          <strong>Atestado de saúde ocupacional</strong><br><br>
+          <strong>${escapeHtml(nome)}</strong><br>
+          Status: <span class="badge ${geral.classe}">${geral.texto}</span><br>
+          ${TIPOS_DOCUMENTOS_OCUPACIONAIS.map(info => escapeHtml(linhaResumoDocumentoOcupacional(tecnicoId, info.tipo))).join("<br>")}
+        </div>
+      `;
+    }
+
+    function htmlResumoAsoPdf(t) {
+      const tecnicoId = getTecnicoIdParaDocumentos(t);
+      const geral = statusGeralDocumentosTecnico(tecnicoId);
+      const nome = t?.nome_tecnico || t?.nome || "Técnico";
+      return `
+        <div class="box" style="page-break-inside: avoid;">
+          <p><strong>${escapeHtml(nome)}</strong></p>
+          <p><strong>Status:</strong> ${escapeHtml(geral.texto)}</p>
+          ${TIPOS_DOCUMENTOS_OCUPACIONAIS.map(info => `<p>${escapeHtml(linhaResumoDocumentoOcupacional(tecnicoId, info.tipo))}</p>`).join("")}
+        </div>
+      `;
+    }
+
+    function renderAlertasAsoDashboard() {
+      const container = document.getElementById("listaAlertasAsoDashboard");
+      if (!container) return;
+      const alertas = montarAlertasDocumentosOcupacionais();
+      if (!alertas.length) {
+        container.innerHTML = `<p class="small">Nenhum documento ocupacional vencido ou a vencer nos próximos 30 dias.</p>`;
+        return;
+      }
+      container.innerHTML = alertas.slice(0, 12).map(a => `
+        <div class="aso-alerta-item">
+          <strong>${escapeHtml(a.tecnicoNome)}</strong><br>
+          <span class="badge ${a.classe}">${escapeHtml(a.status)}</span>
+          <span class="small">${escapeHtml(a.documento)} - ${escapeHtml(a.detalhe)}</span>
+        </div>
+      `).join("");
+    }
+
+    function montarAlertasDocumentosOcupacionais() {
+      const alertas = [];
+      for (const tecnico of (tecnicosCache || []).filter(t => t.ativo)) {
+        const tecnicoId = tecnico.id;
+        for (const info of TIPOS_DOCUMENTOS_OCUPACIONAIS) {
+          const doc = getDocTecnicoPorTipo(tecnicoId, info.tipo);
+          const st = statusDocumentoOcupacional(doc);
+          if (st.ordem >= 2) {
+            alertas.push({
+              tecnicoId,
+              tecnicoNome: tecnico.nome || "Técnico",
+              documento: info.nome,
+              status: st.ordem === 3 ? (doc?.validade ? "Irregular" : "Não informado") : "Atenção",
+              detalhe: doc?.validade ? st.detalhe : "documento não informado",
+              classe: st.classe,
+              ordem: st.ordem,
+              validade: doc?.validade || "9999-12-31"
+            });
+          }
+        }
+      }
+      return alertas.sort((a, b) => b.ordem - a.ordem || String(a.validade).localeCompare(String(b.validade)) || a.tecnicoNome.localeCompare(b.tecnicoNome, "pt-BR"));
+    }
+
+    function renderSelectTecnicosAso() {
+      const select = document.getElementById("asoTecnicoSelect");
+      if (!select) return;
+      const atual = select.value;
+      const lista = [...(tecnicosCache || [])].sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+      select.innerHTML = `<option value="">Selecione um técnico</option>` + lista.map(t => `<option value="${t.id}">${escapeHtml(t.nome || "Sem nome")}${t.ativo ? "" : " (inativo)"}</option>`).join("");
+      if (atual && lista.some(t => t.id === atual)) select.value = atual;
+    }
+
+    function renderAsoAdmin() {
+      renderSelectTecnicosAso();
+      const tecnicoId = document.getElementById("asoTecnicoSelect")?.value || "";
+      const resumo = document.getElementById("asoResumoTecnico");
+      const docsBox = document.getElementById("asoDocumentosAdmin");
+      const alertasBox = document.getElementById("asoAlertasAdmin");
+
+      const alertas = montarAlertasDocumentosOcupacionais();
+      if (alertasBox) {
+        alertasBox.innerHTML = alertas.length ? alertas.slice(0, 10).map(a => `
+          <div class="aso-alerta-item">
+            <strong>${escapeHtml(a.tecnicoNome)}</strong><br>
+            <span class="badge ${a.classe}">${escapeHtml(a.status)}</span>
+            <span class="small">${escapeHtml(a.documento)} - ${escapeHtml(a.detalhe)}</span>
           </div>
+        `).join("") : `<p class="small">Nenhum alerta de ASO/Exames no momento.</p>`;
+      }
+
+      if (!tecnicoId) {
+        if (resumo) resumo.innerHTML = `<p class="small">Selecione um técnico para ver o status.</p>`;
+        if (docsBox) docsBox.innerHTML = `<p class="foto-empty">Selecione um técnico acima para cadastrar ou atualizar os exames.</p>`;
+        return;
+      }
+
+      const tecnico = tecnicosCache.find(t => t.id === tecnicoId);
+      const geral = statusGeralDocumentosTecnico(tecnicoId);
+      if (resumo) {
+        resumo.innerHTML = `
+          <div class="aso-status-item">
+            <strong>${escapeHtml(tecnico?.nome || "Técnico")}</strong><br>
+            <span class="badge ${geral.classe}">Status: ${geral.texto}</span>
+          </div>
+          ${TIPOS_DOCUMENTOS_OCUPACIONAIS.map(info => {
+            const doc = getDocTecnicoPorTipo(tecnicoId, info.tipo);
+            const st = statusDocumentoOcupacional(doc);
+            return `<div class="aso-status-item"><strong>${escapeHtml(info.nome)}</strong><br><span class="badge ${st.classe}">${escapeHtml(st.texto)}</span><br><span class="small">${escapeHtml(st.detalhe)}</span></div>`;
+          }).join("")}
         `;
-        return;
       }
 
-      box.innerHTML = "Nenhum arquivo selecionado/anexado.";
+      if (docsBox) {
+        docsBox.innerHTML = TIPOS_DOCUMENTOS_OCUPACIONAIS.map(info => htmlFormDocumentoOcupacional(tecnicoId, info.tipo)).join("");
+      }
     }
 
-    function selecionarAsoArquivoTecnico(event) {
-      const file = event.target.files?.[0];
-      asoArquivoPendenteTecnico = file || null;
-      const id = document.getElementById("tecIdEditando")?.value;
-      const t = id ? tecnicosCache.find(x => x.id === id) : null;
-      renderAsoArquivoTecnico(t);
+    function htmlFormDocumentoOcupacional(tecnicoId, tipo) {
+      const info = tipoDocumentoInfo(tipo);
+      const doc = getDocTecnicoPorTipo(tecnicoId, tipo) || {};
+      const st = statusDocumentoOcupacional(doc);
+      const temArquivo = !!doc.storage_path;
+      return `
+        <div class="aso-doc-card">
+          <h4>${escapeHtml(info.nome)}</h4>
+          <span class="badge ${st.classe}">${escapeHtml(st.texto)}</span>
+          <span class="small">${escapeHtml(st.detalhe)}</span>
+
+          <div class="grid grid-2" style="margin-top:12px;">
+            <div class="field">
+              <label>Data do exame/laudo</label>
+              <input id="doc_${tipo}_data" type="date" value="${escapeHtml(doc.data_exame || "")}" onchange="calcularValidadeDocumentoNoForm('${tipo}')">
+            </div>
+            <div class="field">
+              <label>Validade</label>
+              <input id="doc_${tipo}_validade" type="date" value="${escapeHtml(doc.validade || "")}">
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Observação</label>
+            <input id="doc_${tipo}_observacao" value="${escapeHtml(doc.observacao || "")}" placeholder="Observação sobre o documento">
+          </div>
+
+          <div class="field">
+            <label>Arquivo do documento</label>
+            <input id="doc_${tipo}_arquivo" type="file" accept="application/pdf,image/*">
+            <p class="small">${temArquivo ? `Arquivo atual: ${escapeHtml(doc.nome_arquivo || "documento anexado")}` : "Nenhum arquivo anexado."}</p>
+          </div>
+
+          <div class="doc-actions">
+            <button class="btn btn-primary btn-mini" type="button" onclick="salvarDocumentoOcupacional('${tipo}')">Salvar ${escapeHtml(info.nome)}</button>
+            ${temArquivo ? `<button class="btn btn-light btn-mini" type="button" onclick="abrirDocumentoOcupacional('${tecnicoId}', '${tipo}')">Visualizar</button>` : ""}
+            ${temArquivo ? `<button class="btn btn-light btn-mini" type="button" onclick="baixarDocumentoOcupacional('${tecnicoId}', '${tipo}')">Baixar</button>` : ""}
+            ${temArquivo ? `<button class="btn btn-danger btn-mini" type="button" onclick="removerArquivoDocumentoOcupacional('${tipo}')">Remover arquivo</button>` : ""}
+          </div>
+        </div>
+      `;
     }
 
-    function limparAsoArquivoPendente() {
-      asoArquivoPendenteTecnico = null;
-      const input = document.getElementById("tecAsoArquivo");
-      if (input) input.value = "";
-      const id = document.getElementById("tecIdEditando")?.value;
-      const t = id ? tecnicosCache.find(x => x.id === id) : null;
-      renderAsoArquivoTecnico(t);
+    function calcularValidadeDocumentoNoForm(tipo) {
+      const info = tipoDocumentoInfo(tipo);
+      const dataEl = document.getElementById(`doc_${tipo}_data`);
+      const validadeEl = document.getElementById(`doc_${tipo}_validade`);
+      if (!dataEl || !validadeEl || !dataEl.value) return;
+      validadeEl.value = adicionarAnosData(dataEl.value, info.anosValidade);
     }
 
-    async function removerAsoTecnicoAtual() {
-      const id = document.getElementById("tecIdEditando")?.value;
-      if (!id) {
-        alert("Abra o técnico em edição para remover o ASO.");
+    async function salvarDocumentoOcupacional(tipo) {
+      if (perfilAtual?.perfil !== "admin") {
+        alert("Somente admin pode cadastrar documentos ocupacionais.");
         return;
       }
 
-      const t = tecnicosCache.find(x => x.id === id);
-      if (!t?.aso_storage_path) {
-        alert("Este técnico não possui ASO anexado.");
+      const tecnicoId = document.getElementById("asoTecnicoSelect")?.value || "";
+      if (!tecnicoId) {
+        alert("Selecione um técnico.");
         return;
       }
 
-      if (!confirm("Remover o arquivo ASO deste técnico?")) return;
+      const info = tipoDocumentoInfo(tipo);
+      const docAtual = getDocTecnicoPorTipo(tecnicoId, tipo);
+      const dataExame = document.getElementById(`doc_${tipo}_data`)?.value || null;
+      const validade = document.getElementById(`doc_${tipo}_validade`)?.value || null;
+      const observacao = document.getElementById(`doc_${tipo}_observacao`)?.value.trim() || null;
+      const arquivo = document.getElementById(`doc_${tipo}_arquivo`)?.files?.[0] || null;
 
-      const { error: storageError } = await supabaseClient.storage.from("apr-arquivos").remove([t.aso_storage_path]);
-      if (storageError) {
-        alert("Erro ao remover arquivo do Storage: " + storageError.message);
-        return;
+      let storage_path = docAtual?.storage_path || null;
+      let mime_type = docAtual?.mime_type || null;
+      let nome_arquivo = docAtual?.nome_arquivo || null;
+
+      try {
+        if (arquivo) {
+          const safeName = String(arquivo.name || `${tipo}.pdf`).replace(/[^a-zA-Z0-9._-]/g, "-");
+          const path = `documentos_ocupacionais/${tecnicoId}/${tipo}/${Date.now()}-${safeName}`;
+          const { error: uploadError } = await supabaseClient.storage.from("apr-arquivos").upload(path, arquivo, {
+            contentType: arquivo.type || "application/octet-stream",
+            upsert: false
+          });
+          if (uploadError) throw uploadError;
+
+          storage_path = path;
+          mime_type = arquivo.type || "application/octet-stream";
+          nome_arquivo = arquivo.name || safeName;
+        }
+
+        const payload = {
+          tecnico_id: tecnicoId,
+          tipo_documento: tipo,
+          data_exame: dataExame,
+          validade,
+          storage_path,
+          mime_type,
+          nome_arquivo,
+          observacao,
+          atualizado_em: new Date().toISOString()
+        };
+
+        let error;
+        if (docAtual?.id) {
+          const res = await supabaseClient.from("tecnicos_documentos_ocupacionais").update(payload).eq("id", docAtual.id);
+          error = res.error;
+        } else {
+          const res = await supabaseClient.from("tecnicos_documentos_ocupacionais").insert(payload);
+          error = res.error;
+        }
+
+        if (error) throw error;
+        alert(`${info.nome} salvo com sucesso.`);
+        await carregarDocumentosOcupacionais();
+        renderAsoAdmin();
+      } catch (err) {
+        alert("Erro ao salvar documento: " + (err.message || String(err)));
       }
+    }
+
+    async function getSignedUrlDocumentoOcupacional(tecnicoId, tipo) {
+      const doc = getDocTecnicoPorTipo(tecnicoId, tipo);
+      if (!doc?.storage_path) return "";
+      const { data, error } = await supabaseClient.storage.from("apr-arquivos").createSignedUrl(doc.storage_path, 60 * 60);
+      if (error) throw error;
+      return data?.signedUrl || "";
+    }
+
+    async function abrirDocumentoOcupacional(tecnicoId, tipo) {
+      try {
+        const url = await getSignedUrlDocumentoOcupacional(tecnicoId, tipo);
+        if (!url) { alert("Documento sem arquivo anexado."); return; }
+        const info = tipoDocumentoInfo(tipo);
+        window.open(url, "_blank", "noopener,noreferrer");
+      } catch (err) {
+        alert("Erro ao abrir documento: " + (err.message || String(err)));
+      }
+    }
+
+    async function baixarDocumentoOcupacional(tecnicoId, tipo) {
+      await abrirDocumentoOcupacional(tecnicoId, tipo);
+    }
+
+    async function removerArquivoDocumentoOcupacional(tipo) {
+      const tecnicoId = document.getElementById("asoTecnicoSelect")?.value || "";
+      const docAtual = getDocTecnicoPorTipo(tecnicoId, tipo);
+      if (!docAtual?.id) return;
+      if (!confirm("Deseja remover o arquivo anexado deste documento? A data e validade serão mantidas.")) return;
 
       const { error } = await supabaseClient
-        .from("tecnicos")
-        .update({
-          aso_storage_path: null,
-          aso_mime_type: null,
-          aso_nome_arquivo: null,
-          aso_enviado_em: null
-        })
-        .eq("id", id);
+        .from("tecnicos_documentos_ocupacionais")
+        .update({ storage_path: null, mime_type: null, nome_arquivo: null, atualizado_em: new Date().toISOString() })
+        .eq("id", docAtual.id);
 
-      if (error) {
-        alert("Arquivo removido, mas erro ao atualizar técnico: " + error.message);
+      if (error) { alert("Erro ao remover arquivo: " + error.message); return; }
+      await carregarDocumentosOcupacionais();
+      renderAsoAdmin();
+    }
+
+    function renderMeusDocumentosOcupacionais() {
+      const box = document.getElementById("meusDocumentosConteudo");
+      if (!box) return;
+      const tecnico = getTecnicoLogado();
+      if (!tecnico) {
+        box.innerHTML = `<p class="foto-empty">Seu usuário ainda não está vinculado a um cadastro de técnico ativo.</p>`;
         return;
       }
 
-      asoArquivoPendenteTecnico = null;
-      const input = document.getElementById("tecAsoArquivo");
-      if (input) input.value = "";
-      await carregarTecnicos();
-      const atualizado = tecnicosCache.find(x => x.id === id);
-      renderAsoArquivoTecnico(atualizado);
-      setMsg("tecMsg", "ok", "ASO removido com sucesso.");
+      const geral = statusGeralDocumentosTecnico(tecnico.id);
+      box.innerHTML = `
+        <div class="aso-resumo-apr">
+          <strong>${escapeHtml(tecnico.nome || "Técnico")}</strong><br>
+          Status: <span class="badge ${geral.classe}">${geral.texto}</span>
+        </div>
+        ${TIPOS_DOCUMENTOS_OCUPACIONAIS.map(info => htmlDocumentoTecnicoReadonly(tecnico.id, info.tipo)).join("")}
+      `;
     }
 
-    async function uploadAsoTecnico(tecnicoId, tecnicoNome) {
-      if (!asoArquivoPendenteTecnico) return null;
-
-      const file = asoArquivoPendenteTecnico;
-      const ext = (file.name.split(".").pop() || "pdf").toLowerCase().replace(/[^a-z0-9]/g, "") || "pdf";
-      const safeName = String(tecnicoNome || tecnicoId || "tecnico")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-zA-Z0-9_-]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .toLowerCase() || "tecnico";
-      const path = `asos/${tecnicoId}/${Date.now()}-${safeName}-aso.${ext}`;
-
-      const { error: uploadError } = await supabaseClient.storage.from("apr-arquivos").upload(path, file, {
-        contentType: file.type || "application/octet-stream",
-        upsert: false
-      });
-
-      if (uploadError) throw uploadError;
-
-      return {
-        aso_storage_path: path,
-        aso_mime_type: file.type || "application/octet-stream",
-        aso_nome_arquivo: file.name,
-        aso_enviado_em: new Date().toISOString()
-      };
+    function htmlDocumentoTecnicoReadonly(tecnicoId, tipo) {
+      const info = tipoDocumentoInfo(tipo);
+      const doc = getDocTecnicoPorTipo(tecnicoId, tipo);
+      const st = statusDocumentoOcupacional(doc);
+      const temArquivo = !!doc?.storage_path;
+      return `
+        <div class="aso-doc-card">
+          <h4>${escapeHtml(info.nome)}</h4>
+          <span class="badge ${st.classe}">${escapeHtml(st.texto)}</span>
+          <span class="small">${escapeHtml(st.detalhe)}</span>
+          ${doc?.data_exame ? `<p class="small">Data do exame/laudo: ${formatarDataSimples(doc.data_exame)}</p>` : ""}
+          ${doc?.observacao ? `<p class="small">Observação: ${escapeHtml(doc.observacao)}</p>` : ""}
+          <div class="doc-actions">
+            ${temArquivo ? `<button class="btn btn-light btn-mini" type="button" onclick="abrirDocumentoOcupacional('${tecnicoId}', '${tipo}')">Visualizar</button>` : `<span class="small">Arquivo não anexado.</span>`}
+            ${temArquivo ? `<button class="btn btn-light btn-mini" type="button" onclick="baixarDocumentoOcupacional('${tecnicoId}', '${tipo}')">Baixar</button>` : ""}
+          </div>
+        </div>
+      `;
     }
 
     function getTecnicosFiltradosCadastro() {
@@ -3060,10 +3214,6 @@
       document.getElementById("tecAsoValidade").value = t.aso_validade || "";
       document.getElementById("tecAsoObservacao").value = t.aso_observacao || "";
       document.getElementById("tecAtivo").value = String(!!t.ativo);
-      asoArquivoPendenteTecnico = null;
-      const inputAso = document.getElementById("tecAsoArquivo");
-      if (inputAso) inputAso.value = "";
-      renderAsoArquivoTecnico(t);
 
       document.getElementById("tituloFormTecnico").textContent = "Editando técnico";
       document.getElementById("btnSalvarTecnico").textContent = "Salvar alterações";
@@ -3082,10 +3232,6 @@
       document.getElementById("tecAsoValidade").value = "";
       document.getElementById("tecAsoObservacao").value = "";
       document.getElementById("tecAtivo").value = "true";
-      asoArquivoPendenteTecnico = null;
-      const inputAso = document.getElementById("tecAsoArquivo");
-      if (inputAso) inputAso.value = "";
-      renderAsoArquivoTecnico(null);
 
       document.getElementById("tituloFormTecnico").textContent = "Novo técnico";
       document.getElementById("btnSalvarTecnico").textContent = "Cadastrar técnico";
@@ -3146,50 +3292,25 @@
       };
 
       let error;
-      let tecnicoSalvoId = id || null;
 
       if (id) {
         const res = await supabaseClient
           .from("tecnicos")
           .update(payloadTecnico)
-          .eq("id", id)
-          .select("id")
-          .single();
+          .eq("id", id);
 
         error = res.error;
-        tecnicoSalvoId = res.data?.id || id;
       } else {
         const res = await supabaseClient
           .from("tecnicos")
-          .insert(payloadTecnico)
-          .select("id")
-          .single();
+          .insert(payloadTecnico);
 
         error = res.error;
-        tecnicoSalvoId = res.data?.id || null;
       }
 
       if (error) {
         setMsg("tecMsg", "err", "Erro ao salvar técnico: " + error.message);
         return;
-      }
-
-      if (asoArquivoPendenteTecnico && tecnicoSalvoId) {
-        try {
-          const asoPayload = await uploadAsoTecnico(tecnicoSalvoId, nome);
-          if (asoPayload) {
-            const { error: asoUpdateError } = await supabaseClient
-              .from("tecnicos")
-              .update(asoPayload)
-              .eq("id", tecnicoSalvoId);
-
-            if (asoUpdateError) throw asoUpdateError;
-          }
-        } catch (err) {
-          setMsg("tecMsg", "err", "Técnico salvo, mas erro ao enviar ASO: " + (err.message || err));
-          await carregarTecnicos();
-          return;
-        }
       }
 
       setMsg("tecMsg", "ok", id ? "Técnico atualizado com sucesso." : "Técnico cadastrado com sucesso.");
@@ -4933,16 +5054,16 @@
                     ? `<span class="badge finalizada">Assinado</span> <span class="small">${formatarData(t.assinado_em)}</span>`
                     : `<span class="badge aguardando_assinaturas">Pendente</span>`}
                   ${formatarLocalizacaoAssinatura(t)}
-                  <br>${htmlAsoTecnico(t)}
+                  ${htmlResumoAsoApr(t)}
                   ${t.assinatura_url ? `
                     <br><span class="small"><strong>Assinatura:</strong></span><br>
-                    <img class="assinatura-img foto-clickable" src="${t.assinatura_url}" alt="Assinatura de ${escapeHtml(t.nome_tecnico)}" onclick='abrirVisualizadorFoto(${JSON.stringify(t.assinatura_url || "")}, ${JSON.stringify("Assinatura - " + (t.nome_tecnico || "Técnico"))})'>
-                    <br><button class="btn btn-light btn-mini" type="button" onclick='abrirVisualizadorFoto(${JSON.stringify(t.assinatura_url || "")}, ${JSON.stringify("Assinatura - " + (t.nome_tecnico || "Técnico"))})'>Ver assinatura</button>
+                    <img class="assinatura-img foto-clickable" src="${t.assinatura_url}" alt="Assinatura de ${escapeHtml(t.nome_tecnico)}" onclick="abrirVisualizadorAssinaturaApr('${apr.id}', ${idx}, 'assinatura')">
+                    <br><button class="btn btn-light btn-mini" type="button" onclick="abrirVisualizadorAssinaturaApr('${apr.id}', ${idx}, 'assinatura')">Ver assinatura</button>
                   ` : ""}
                   ${t.selfie_url ? `
                     <br><span class="small"><strong>Selfie da assinatura:</strong></span><br>
-                    <img class="assinatura-img foto-clickable" src="${t.selfie_url}" alt="Selfie de ${escapeHtml(t.nome_tecnico)}" onclick='abrirVisualizadorFoto(${JSON.stringify(t.selfie_url || "")}, ${JSON.stringify("Selfie - " + (t.nome_tecnico || "Técnico"))})'>
-                    <br><button class="btn btn-light btn-mini" type="button" onclick='abrirVisualizadorFoto(${JSON.stringify(t.selfie_url || "")}, ${JSON.stringify("Selfie - " + (t.nome_tecnico || "Técnico"))})'>Ver selfie</button>
+                    <img class="assinatura-img foto-clickable" src="${t.selfie_url}" alt="Selfie de ${escapeHtml(t.nome_tecnico)}" onclick="abrirVisualizadorAssinaturaApr('${apr.id}', ${idx}, 'selfie')">
+                    <br><button class="btn btn-light btn-mini" type="button" onclick="abrirVisualizadorAssinaturaApr('${apr.id}', ${idx}, 'selfie')">Ver selfie</button>
                   ` : (t.assinado ? `<br><span class="small"><strong>Selfie:</strong> não registrada</span>` : "")}
                 </div>
                 <div class="row-actions">
@@ -4994,10 +5115,10 @@
     }
 
     function abrirVisualizadorAssinaturaApr(aprId, indice, tipo) {
-      const lista = detalhesAssinaturaCache?.[aprId] || detalhesAssinaturaCache?.[String(aprId)] || [];
-      const tecnico = lista[Number(indice)];
+      const lista = detalhesAssinaturaCache?.[aprId] || [];
+      const tecnico = lista[indice];
       if (!tecnico) {
-        alert("Não encontrei essa assinatura/selfie na APR. Feche e abra a APR novamente.");
+        alert("Não encontrei essa assinatura na APR. Feche e abra a APR novamente.");
         return;
       }
 
@@ -5078,195 +5199,394 @@
         return;
       }
 
-      // Importante: abrir a janela logo no clique evita bloqueio de popup,
-      // pois a busca das imagens/assinaturas é assíncrona.
+      const { data: apr, error: aprError } = await supabaseClient.from("aprs").select("*").eq("id", aprId).single();
+      if (aprError || !apr) {
+        alert("Erro ao carregar APR para download.");
+        return;
+      }
+
+      const { data: tecs } = await supabaseClient.from("apr_tecnicos").select("*").eq("apr_id", aprId).order("nome_tecnico");
+      const mapaTecnicosCadastro = new Map((tecnicosCache || []).map(t => [t.id, t]));
+      const { data: respostas } = await supabaseClient.from("apr_checklist_respostas").select("*").eq("apr_id", aprId).order("ordem");
+      const { data: fotos } = await supabaseClient.from("apr_fotos").select("*").eq("apr_id", aprId).order("enviada_em", { ascending: true });
+
+      const fotosComUrl = [];
+      for (const foto of (fotos || [])) {
+        const { data: signed } = await supabaseClient
+          .storage
+          .from("apr-arquivos")
+          .createSignedUrl(foto.storage_path, 60 * 60);
+
+        fotosComUrl.push({ ...foto, signed_url: signed?.signedUrl || "" });
+      }
+
+      const tecsComAssinatura = [];
+      for (const t of (tecs || [])) {
+        let assinatura_url = "";
+        let selfie_url = "";
+
+        if (t.assinatura_storage_path) {
+          const { data: signedAss } = await supabaseClient
+            .storage
+            .from("apr-arquivos")
+            .createSignedUrl(t.assinatura_storage_path, 60 * 60);
+          assinatura_url = signedAss?.signedUrl || "";
+        }
+
+        if (t.assinatura_selfie_storage_path) {
+          const { data: signedSelfie } = await supabaseClient
+            .storage
+            .from("apr-arquivos")
+            .createSignedUrl(t.assinatura_selfie_storage_path, 60 * 60);
+          selfie_url = signedSelfie?.signedUrl || "";
+        }
+
+        const cadastroTec = t.tecnico_id ? mapaTecnicosCadastro.get(t.tecnico_id) : null;
+        tecsComAssinatura.push({
+          ...t,
+          ...cadastroTec,
+          nome_tecnico: t.nome_tecnico,
+          assinatura_url,
+          selfie_url
+        });
+      }
+
+      const nomeArquivo = `APR-${apr.numero_apr || apr.numero_os || apr.id}`.replaceAll("/", "-").replaceAll(" ", "-");
+
+      const html = `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8">
+          <title>${escapeHtml(nomeArquivo)}</title>
+          <style>
+            body { font-family: Arial, Helvetica, sans-serif; color: #1d2939; margin: 24px; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0057a8; padding-bottom: 12px; margin-bottom: 18px; }
+            .brand { font-size: 24px; font-weight: 900; color: #0057a8; }
+            h1 { font-size: 22px; margin: 0 0 6px; color: #003b73; }
+            h2 { font-size: 16px; color: #003b73; border-bottom: 1px solid #d0d5dd; padding-bottom: 5px; margin-top: 22px; }
+            p { margin: 5px 0; font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
+            th, td { border: 1px solid #d0d5dd; padding: 6px; text-align: left; vertical-align: top; }
+            th { background: #f2f4f7; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+            .box { border: 1px solid #d0d5dd; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+            .badge { display: inline-block; border-radius: 999px; padding: 3px 7px; font-weight: 700; font-size: 10px; border: 1px solid #d0d5dd; }
+            .ok { background: #ecfdf3; color: #027a48; border-color: #abefc6; }
+            .pend { background: #eff8ff; color: #175cd3; border-color: #b2ddff; }
+            .foto-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .foto { border: 1px solid #d0d5dd; border-radius: 8px; padding: 6px; page-break-inside: avoid; }
+            .foto img { width: 100%; max-height: 230px; object-fit: contain; }
+            .assinatura-img { max-width: 220px; max-height: 90px; border: 1px solid #d0d5dd; margin-top: 6px; object-fit: contain; background: #fff; }
+            .selfie-img { width: 86px; height: 86px; border: 1px solid #d0d5dd; border-radius: 10px; object-fit: cover; background: #fff; margin-top: 6px; display: block; }
+            .assinatura-cell { min-width: 170px; }
+            .selfie-label { font-size: 10px; font-weight: 700; color: #344054; margin-top: 8px; display: block; }
+            @media print { body { margin: 12mm; } button { display: none; } .page-break { page-break-before: always; } }
+        
+
+    /* Ajuste especial para celular: questionário mais compacto e fácil de usar */
+    .answer-btn.answer-disabled,
+    .answer-btn:disabled {
+      background: #f8fafc;
+      color: #98a2b3;
+      border-color: #e4e7ec;
+      box-shadow: none;
+      transform: none;
+    }
+
+    @media (max-width: 600px) {
+      .main {
+        padding: 12px;
+      }
+
+      .topbar {
+        margin-bottom: 14px;
+      }
+
+      .topbar h2 {
+        font-size: 22px;
+      }
+
+      .topbar p {
+        font-size: 13px;
+      }
+
+      .card {
+        padding: 13px;
+        border-radius: 16px;
+      }
+
+      .form-section {
+        padding: 12px;
+        border-radius: 14px;
+        margin-bottom: 12px;
+      }
+
+      .form-section h4 {
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+
+      .wizard-box {
+        padding: 14px;
+        border-radius: 18px;
+        box-shadow: none;
+      }
+
+      .wizard-progress {
+        height: 8px;
+        margin-bottom: 13px;
+      }
+
+      .wizard-header {
+        margin-bottom: 10px;
+      }
+
+      .wizard-title {
+        font-size: 12px;
+        margin-bottom: 6px;
+        letter-spacing: .02em;
+      }
+
+      .wizard-question {
+        font-size: 18px;
+        line-height: 1.25;
+        margin-bottom: 8px;
+      }
+
+      .answer-buttons {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 8px;
+        margin: 12px 0;
+      }
+
+      .answer-btn {
+        min-height: 58px;
+        padding: 10px 4px;
+        border-radius: 14px;
+        font-size: 14px;
+        line-height: 1.15;
+      }
+
+      .answer-btn.answer-disabled,
+      .answer-btn:disabled {
+        font-size: 12px;
+      }
+
+      .wizard-footer {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .wizard-footer .btn {
+        width: 100%;
+        padding: 12px 10px;
+        border-radius: 13px;
+      }
+
+      .question-summary {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 6px;
+        padding: 2px 0 8px;
+        margin-top: 12px;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .question-summary::-webkit-scrollbar {
+        display: none;
+      }
+
+      .dot {
+        flex: 0 0 auto;
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+      }
+
+      input,
+      select,
+      textarea {
+        font-size: 16px;
+      }
+    }
+
+
+    .offline-status {
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-weight: 800;
+      font-size: 13px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .offline-status.online {
+      background: #ecfdf3;
+      color: #027a48;
+      border-color: #abefc6;
+    }
+
+    .offline-status.offline {
+      background: #fffaeb;
+      color: #b54708;
+      border-color: #fedf89;
+    }
+
+    .offline-status.syncing {
+      background: #eff8ff;
+      color: #175cd3;
+      border-color: #b2ddff;
+    }
+
+    .nav-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.22);
+      margin-left: 6px;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .offline-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 12px;
+      background: #fff;
+    }
+
+    .offline-card h4 {
+      margin: 0 0 6px;
+    }
+
+    .offline-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0 12px;
+    }
+
+    .offline-meta span {
+      background: #f2f4f7;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+  </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="brand">VIATEC</div>
+              <h1>PT - Permissão de Trabalho / APR - Análise Preliminar de Risco</h1>
+              <p>Documento gerado em ${formatarData(new Date().toISOString())}</p>
+            </div>
+            <div>
+              <p><strong>APR:</strong> ${escapeHtml(apr.numero_apr || "-")}</p>
+              <p><strong>Status:</strong> ${escapeHtml(labelStatus(apr.status))}</p>
+            </div>
+          </div>
+
+          <h2>Dados da OS / Cliente</h2>
+          <div class="grid">
+            <div class="box">
+              <p><strong>OS:</strong> ${escapeHtml(apr.numero_os || "-")}</p>
+              <p><strong>Protocolo:</strong> ${escapeHtml(apr.protocolo_os || "-")}</p>
+              <p><strong>Código do cliente:</strong> ${escapeHtml(apr.codigo_cliente || "-")}</p>
+              <p><strong>Cliente:</strong> ${escapeHtml(apr.cliente_nome || "-")}</p>
+            </div>
+            <div class="box">
+              <p><strong>Cidade/Bairro:</strong> ${escapeHtml(apr.cidade_bairro || "-")}</p>
+              <p><strong>Endereço:</strong> ${escapeHtml(apr.cliente_endereco || "-")}</p>
+              <p><strong>Serviço:</strong> ${escapeHtml(formatarTipoServico(apr.tipo_servico, apr.tipo_servico_outros))}</p>
+              <p><strong>Emitida em:</strong> ${formatarData(apr.emitida_em || apr.criada_em)}</p>
+            </div>
+          </div>
+
+          <h2>Descrição da atividade</h2>
+          <div class="box"><p>${escapeHtml(apr.descricao_atividade || "-")}</p></div>
+
+          <h2>Técnicos e assinaturas</h2>
+          <table>
+            <thead><tr><th>Técnico</th><th>Cargo</th><th>Status</th><th>Assinatura / Selfie</th></tr></thead>
+            <tbody>
+              ${tecsComAssinatura.map(t => `
+                <tr>
+                  <td>${escapeHtml(t.nome_tecnico || "-")} ${t.responsavel ? "(Responsável)" : ""}</td>
+                  <td>${escapeHtml(t.cargo || "-")}</td>
+                  <td>${t.assinado ? `<span class="badge ok">Assinado</span><br>${formatarData(t.assinado_em)}${formatarLocalizacaoAssinatura(t)}` : `<span class="badge pend">Pendente</span>`}</td>
+                  <td class="assinatura-cell">
+                    ${t.assinatura_url ? `<span class="selfie-label">Assinatura</span><img class="assinatura-img" src="${t.assinatura_url}">` : "-"}
+                    ${t.selfie_url ? `<span class="selfie-label">Selfie</span><img class="selfie-img" src="${t.selfie_url}">` : `<span class="selfie-label">Selfie: não registrada</span>`}
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+
+          <h2>Atestado de saúde ocupacional</h2>
+          ${tecsComAssinatura.map(t => htmlResumoAsoPdf(t)).join("")}
+
+          <h2>Checklist</h2>
+          <table>
+            <thead><tr><th>#</th><th>Grupo</th><th>Pergunta</th><th>Resposta</th><th>Observação</th></tr></thead>
+            <tbody>
+              ${(respostas || []).map(r => `
+                <tr>
+                  <td>${escapeHtml(r.ordem || "")}</td>
+                  <td>${escapeHtml(r.grupo || "-")}</td>
+                  <td>${escapeHtml(r.pergunta || "-")}</td>
+                  <td><strong>${escapeHtml(r.resposta || "-")}</strong></td>
+                  <td>${escapeHtml(r.observacao || "-")}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+
+          <h2>Observações adicionais</h2>
+          <div class="box"><p>${escapeHtml(apr.observacoes_adicionais || "-")}</p></div>
+
+          <div class="page-break"></div>
+          <h2>Fotos de comprovação</h2>
+          ${fotosComUrl.length ? `
+            <div class="foto-grid">
+              ${fotosComUrl.map(f => `
+                <div class="foto">
+                  <img src="${f.signed_url}">
+                  <p><strong>${escapeHtml(f.arquivo_nome || "Foto")}</strong></p>
+                  <p>Enviada em: ${formatarData(f.enviada_em)}</p>
+                </div>
+              `).join("")}
+            </div>
+          ` : `<p>Nenhuma foto vinculada.</p>`}
+        </body>
+        </html>
+      `;
+
       const janela = window.open("", "_blank");
       if (!janela) {
         alert("Permita pop-ups para baixar/imprimir a APR.");
         return;
       }
       janela.document.open();
-      janela.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Gerando APR...</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#1d2939}</style></head><body><h2>Gerando APR...</h2><p>Aguarde enquanto carregamos assinaturas, selfies e fotos.</p></body></html>`);
+      janela.document.write(html);
       janela.document.close();
-
-      try {
-        const { data: apr, error: aprError } = await supabaseClient.from("aprs").select("*").eq("id", aprId).single();
-        if (aprError || !apr) {
-          janela.close();
-          alert("Erro ao carregar APR para download.");
-          return;
-        }
-
-        const { data: tecs } = await supabaseClient.from("apr_tecnicos").select("*").eq("apr_id", aprId).order("nome_tecnico");
-        const mapaTecnicosCadastro = new Map((tecnicosCache || []).map(t => [t.id, t]));
-        const { data: respostas } = await supabaseClient.from("apr_checklist_respostas").select("*").eq("apr_id", aprId).order("ordem");
-        const { data: fotos } = await supabaseClient.from("apr_fotos").select("*").eq("apr_id", aprId).order("enviada_em", { ascending: true });
-
-        const fotosComUrl = [];
-        for (const foto of (fotos || [])) {
-          const { data: signed } = await supabaseClient.storage.from("apr-arquivos").createSignedUrl(foto.storage_path, 60 * 60);
-          fotosComUrl.push({ ...foto, signed_url: signed?.signedUrl || "" });
-        }
-
-        const tecsComAssinatura = [];
-        for (const t of (tecs || [])) {
-          let assinatura_url = "";
-          let selfie_url = "";
-
-          if (t.assinatura_storage_path) {
-            const { data: signedAss } = await supabaseClient.storage.from("apr-arquivos").createSignedUrl(t.assinatura_storage_path, 60 * 60);
-            assinatura_url = signedAss?.signedUrl || "";
-          }
-
-          if (t.assinatura_selfie_storage_path) {
-            const { data: signedSelfie } = await supabaseClient.storage.from("apr-arquivos").createSignedUrl(t.assinatura_selfie_storage_path, 60 * 60);
-            selfie_url = signedSelfie?.signedUrl || "";
-          }
-
-          const cadastroTec = t.tecnico_id ? mapaTecnicosCadastro.get(t.tecnico_id) : null;
-          tecsComAssinatura.push({
-            ...(cadastroTec || {}),
-            ...t,
-            vinculo_id: t.id,
-            tecnico_cadastro_id: t.tecnico_id,
-            nome_tecnico: t.nome_tecnico || cadastroTec?.nome || t.nome || "Técnico",
-            cargo: t.cargo || cadastroTec?.cargo || "-",
-            assinatura_url,
-            selfie_url
-          });
-        }
-
-        const nomeArquivo = `APR-${apr.numero_apr || apr.numero_os || apr.id}`.replaceAll("/", "-").replaceAll(" ", "-");
-
-        const html = `
-          <!DOCTYPE html>
-          <html lang="pt-BR">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${escapeHtml(nomeArquivo)}</title>
-            <style>
-              body { font-family: Arial, Helvetica, sans-serif; color: #1d2939; margin: 24px; }
-              .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0057a8; padding-bottom: 12px; margin-bottom: 18px; gap: 16px; }
-              .brand { font-size: 24px; font-weight: 900; color: #0057a8; }
-              h1 { font-size: 22px; margin: 0 0 6px; color: #003b73; }
-              h2 { font-size: 16px; color: #003b73; border-bottom: 1px solid #d0d5dd; padding-bottom: 5px; margin-top: 22px; }
-              p { margin: 5px 0; font-size: 12px; }
-              table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
-              th, td { border: 1px solid #d0d5dd; padding: 6px; text-align: left; vertical-align: top; }
-              th { background: #f2f4f7; }
-              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-              .box { border: 1px solid #d0d5dd; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
-              .badge { display: inline-block; border-radius: 999px; padding: 3px 7px; font-weight: 700; font-size: 10px; border: 1px solid #d0d5dd; }
-              .ok { background: #ecfdf3; color: #027a48; border-color: #abefc6; }
-              .pend { background: #eff8ff; color: #175cd3; border-color: #b2ddff; }
-              .foto-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-              .foto { border: 1px solid #d0d5dd; border-radius: 8px; padding: 6px; page-break-inside: avoid; }
-              .foto img { width: 100%; max-height: 230px; object-fit: contain; }
-              .assinatura-img { max-width: 220px; max-height: 90px; border: 1px solid #d0d5dd; margin-top: 6px; object-fit: contain; background: #fff; display: block; }
-              .selfie-img { width: 94px; height: 94px; border: 1px solid #d0d5dd; border-radius: 10px; object-fit: cover; background: #fff; margin-top: 6px; display: block; }
-              .assinatura-cell { min-width: 170px; }
-              .selfie-label { font-size: 10px; font-weight: 700; color: #344054; margin-top: 8px; display: block; }
-              @media print { body { margin: 12mm; } button { display: none; } .page-break { page-break-before: always; } }
-            </style>
-          </head>
-          <body>
-            <button onclick="window.print()" style="padding:10px 14px;border:0;border-radius:8px;background:#2bb673;color:white;font-weight:800;margin-bottom:14px;">Imprimir / Salvar PDF</button>
-            <div class="header">
-              <div>
-                <div class="brand">VIATEC</div>
-                <h1>PT - Permissão de Trabalho / APR - Análise Preliminar de Risco</h1>
-                <p>Documento gerado em ${formatarData(new Date().toISOString())}</p>
-              </div>
-              <div>
-                <p><strong>APR:</strong> ${escapeHtml(apr.numero_apr || "-")}</p>
-                <p><strong>Status:</strong> ${escapeHtml(labelStatus(apr.status))}</p>
-              </div>
-            </div>
-
-            <h2>Dados da OS / Cliente</h2>
-            <div class="grid">
-              <div class="box">
-                <p><strong>OS:</strong> ${escapeHtml(apr.numero_os || "-")}</p>
-                <p><strong>Protocolo:</strong> ${escapeHtml(apr.protocolo_os || "-")}</p>
-                <p><strong>Código do cliente:</strong> ${escapeHtml(apr.codigo_cliente || "-")}</p>
-                <p><strong>Cliente:</strong> ${escapeHtml(apr.cliente_nome || "-")}</p>
-              </div>
-              <div class="box">
-                <p><strong>Cidade/Bairro:</strong> ${escapeHtml(apr.cidade_bairro || "-")}</p>
-                <p><strong>Endereço:</strong> ${escapeHtml(apr.cliente_endereco || "-")}</p>
-                <p><strong>Serviço:</strong> ${escapeHtml(formatarTipoServico(apr.tipo_servico, apr.tipo_servico_outros))}</p>
-                <p><strong>Emitida em:</strong> ${formatarData(apr.emitida_em || apr.criada_em)}</p>
-              </div>
-            </div>
-
-            <h2>Descrição da atividade</h2>
-            <div class="box"><p>${escapeHtml(apr.descricao_atividade || "-")}</p></div>
-
-            <h2>Técnicos e assinaturas</h2>
-            <table>
-              <thead><tr><th>Técnico</th><th>Cargo</th><th>Status</th><th>Assinatura / Selfie</th></tr></thead>
-              <tbody>
-                ${tecsComAssinatura.map(t => `
-                  <tr>
-                    <td>${escapeHtml(t.nome_tecnico || "-")} ${t.responsavel ? "(Responsável)" : ""}</td>
-                    <td>${escapeHtml(t.cargo || "-")}<br>${htmlAsoTecnico(t)}</td>
-                    <td>${t.assinado ? `<span class="badge ok">Assinado</span><br>${formatarData(t.assinado_em)}${formatarLocalizacaoAssinatura(t)}` : `<span class="badge pend">Pendente</span>`}</td>
-                    <td class="assinatura-cell">
-                      ${t.assinatura_url ? `<span class="selfie-label">Assinatura</span><img class="assinatura-img" src="${t.assinatura_url}">` : "-"}
-                      ${t.selfie_url ? `<span class="selfie-label">Selfie</span><img class="selfie-img" src="${t.selfie_url}">` : `<span class="selfie-label">Selfie: não registrada</span>`}
-                    </td>
-                  </tr>
-                `).join("")}
-              </tbody>
-            </table>
-
-            <h2>Checklist</h2>
-            <table>
-              <thead><tr><th>#</th><th>Grupo</th><th>Pergunta</th><th>Resposta</th><th>Observação</th></tr></thead>
-              <tbody>
-                ${(respostas || []).map(r => `
-                  <tr>
-                    <td>${escapeHtml(r.ordem || "")}</td>
-                    <td>${escapeHtml(r.grupo || "-")}</td>
-                    <td>${escapeHtml(r.pergunta || "-")}</td>
-                    <td><strong>${escapeHtml(r.resposta || "-")}</strong></td>
-                    <td>${escapeHtml(r.observacao || "-")}</td>
-                  </tr>
-                `).join("")}
-              </tbody>
-            </table>
-
-            <h2>Observações adicionais</h2>
-            <div class="box"><p>${escapeHtml(apr.observacoes_adicionais || "-")}</p></div>
-
-            <div class="page-break"></div>
-            <h2>Fotos de comprovação</h2>
-            ${fotosComUrl.length ? `
-              <div class="foto-grid">
-                ${fotosComUrl.map(f => `
-                  <div class="foto">
-                    <img src="${f.signed_url}">
-                    <p><strong>${escapeHtml(f.arquivo_nome || "Foto")}</strong></p>
-                    <p>Enviada em: ${formatarData(f.enviada_em)}</p>
-                  </div>
-                `).join("")}
-              </div>
-            ` : `<p>Nenhuma foto vinculada.</p>`}
-          </body>
-          </html>
-        `;
-
-        janela.document.open();
-        janela.document.write(html);
-        janela.document.close();
-        setTimeout(() => {
-          try { janela.focus(); janela.print(); } catch (e) { console.warn(e); }
-        }, 900);
-      } catch (err) {
-        janela.close();
-        alert("Erro ao gerar APR: " + (err?.message || err));
-      }
+      setTimeout(() => {
+        janela.focus();
+        janela.print();
+      }, 900);
     }
 
 
