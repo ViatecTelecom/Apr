@@ -1922,12 +1922,13 @@
           <div class="topbar">
             <div>
               <h2>Técnicos</h2>
-              <p>Cadastre e edite os técnicos que poderão ser adicionados nas APRs.</p>
+              <p>Consulte, edite e adicione técnicos que poderão ser vinculados nas APRs.</p>
             </div>
+            <button class="btn btn-green" type="button" onclick="abrirFormTecnicoNovo()">+ Técnico</button>
           </div>
 
-          <div class="grid grid-2">
-            <div class="card">
+          <div class="grid">
+            <div id="cardFormTecnico" class="card hidden">
               <h3 id="tituloFormTecnico">Novo técnico</h3>
 
               <input type="hidden" id="tecIdEditando">
@@ -1955,7 +1956,10 @@
 
               <input id="tecAsoValidade" type="hidden">
               <input id="tecAsoObservacao" type="hidden">
-              <p class="small">Os documentos de ASO, glicemia, eletrocardiograma e laudo psicossocial agora ficam na sessão <strong>ASO / Exames</strong>.</p>
+              <div class="foto-empty" style="margin: 4px 0 16px;">
+                <strong>ASO / Exames:</strong> para não poluir o cadastro, os documentos ocupacionais ficam na sessão <strong>ASO / Exames</strong>.
+                Depois de cadastrar o técnico, use o botão <strong>ASO</strong> na lista para preencher glicemia, eletrocardiograma e laudo psicossocial.
+              </div>
 
               <div class="field">
                 <label>Status</label>
@@ -1967,14 +1971,20 @@
 
               <div class="row-actions">
                 <button id="btnSalvarTecnico" class="btn btn-primary" onclick="salvarTecnico()">Cadastrar técnico</button>
-                <button id="btnCancelarTecnico" class="btn btn-light hidden" onclick="limparFormTecnico()">Cancelar edição</button>
+                <button id="btnCancelarTecnico" class="btn btn-light hidden" onclick="fecharFormTecnico()">Cancelar</button>
               </div>
 
               <div id="tecMsg" class="msg"></div>
             </div>
 
             <div class="card">
-              <h3>Técnicos cadastrados</h3>
+              <div class="topbar" style="margin-bottom: 10px;">
+                <div>
+                  <h3 style="margin-bottom:4px;">Técnicos cadastrados</h3>
+                  <p class="small">A lista fica separada do cadastro para facilitar a consulta.</p>
+                </div>
+                <button class="btn btn-green btn-mini" type="button" onclick="abrirFormTecnicoNovo()">+ Técnico</button>
+              </div>
 
               <div class="grid grid-2">
                 <div class="field">
@@ -3385,6 +3395,7 @@
             <td>
               <div class="row-actions">
                 <button class="btn btn-light btn-mini" onclick="editarTecnico('${t.id}')">Editar</button>
+                <button class="btn btn-primary btn-mini" onclick="abrirAsoDoTecnico('${t.id}')">ASO</button>
                 <button class="btn ${t.ativo ? 'btn-warning' : 'btn-green'} btn-mini" onclick="alterarStatusTecnico('${t.id}', ${t.ativo ? 'false' : 'true'})">${t.ativo ? 'Inativar' : 'Ativar'}</button>
               </div>
             </td>
@@ -3446,6 +3457,32 @@
       setMsg("tecMsg", "ok", ativo ? "Técnico ativado com sucesso." : "Técnico inativado com sucesso.");
     }
 
+    function abrirFormTecnicoNovo() {
+      limparFormTecnico(true);
+      const card = document.getElementById("cardFormTecnico");
+      if (card) {
+        card.classList.remove("hidden");
+        setTimeout(() => card.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+      }
+    }
+
+    function fecharFormTecnico() {
+      limparFormTecnico(false);
+      const card = document.getElementById("cardFormTecnico");
+      if (card) card.classList.add("hidden");
+    }
+
+    function abrirAsoDoTecnico(id) {
+      if (!id) return;
+      showTab("aso");
+      setTimeout(() => {
+        const select = document.getElementById("asoTecnicoSelect");
+        if (select) select.value = id;
+        selecionarTecnicoAso(id);
+        document.getElementById("tabAso")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 150);
+    }
+
     function editarTecnico(id) {
       if (perfilAtual?.perfil !== "admin") {
         alert("Somente admin pode editar técnicos.");
@@ -3464,15 +3501,18 @@
       document.getElementById("tecAsoObservacao").value = t.aso_observacao || "";
       document.getElementById("tecAtivo").value = String(!!t.ativo);
 
+      const card = document.getElementById("cardFormTecnico");
+      if (card) card.classList.remove("hidden");
+
       document.getElementById("tituloFormTecnico").textContent = "Editando técnico";
       document.getElementById("btnSalvarTecnico").textContent = "Salvar alterações";
       document.getElementById("btnCancelarTecnico").classList.remove("hidden");
 
       clearMsg("tecMsg");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(() => card?.scrollIntoView({ top: 0, behavior: "smooth", block: "start" }), 80);
     }
 
-    function limparFormTecnico() {
+    function limparFormTecnico(manterAberto = false) {
       document.getElementById("tecIdEditando").value = "";
       document.getElementById("tecNome").value = "";
       document.getElementById("tecCargo").value = "Técnico/Auxiliar de Telecomunicações";
@@ -3485,6 +3525,7 @@
       document.getElementById("tituloFormTecnico").textContent = "Novo técnico";
       document.getElementById("btnSalvarTecnico").textContent = "Cadastrar técnico";
       document.getElementById("btnCancelarTecnico").classList.add("hidden");
+      if (!manterAberto) document.getElementById("cardFormTecnico")?.classList.add("hidden");
       clearMsg("tecMsg");
     }
 
