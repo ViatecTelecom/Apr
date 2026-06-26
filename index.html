@@ -1436,6 +1436,95 @@
       margin-top: 8px;
     }
 
+
+
+    .aso-page-layout {
+      display: grid;
+      gap: 18px;
+    }
+
+    .aso-select-card {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+      align-items: end;
+    }
+
+    .aso-parecer-card {
+      border: 1px solid #d7e5ff;
+      background: linear-gradient(135deg, #ffffff, #f5faff);
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .aso-parecer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .aso-parecer-header h3,
+    .aso-editor-header h3 {
+      margin: 0;
+      color: var(--azul-escuro);
+    }
+
+    .aso-documentos-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .aso-doc-resumo-card {
+      background: #fff;
+      border: 1px solid #e4e7ec;
+      border-radius: 16px;
+      padding: 13px;
+    }
+
+    .aso-doc-resumo-card strong {
+      display: block;
+      color: var(--azul-escuro);
+      margin-bottom: 7px;
+    }
+
+    .aso-editor-card.hidden-by-aso {
+      display: none;
+    }
+
+    .aso-editor-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      align-items: start;
+    }
+
+    .aso-alertas-lista {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 10px;
+    }
+
+    .aso-alerta-tecnico {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid #fedf89;
+      background: #fffaeb;
+      color: #93370d;
+      border-radius: 14px;
+    }
+
+    @media (max-width: 1100px) {
+      .aso-select-card,
+      .aso-documentos-grid,
+      .aso-editor-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
   </style>
 </head>
 
@@ -1925,40 +2014,56 @@
           <div class="topbar">
             <div>
               <h2>ASO / Exames ocupacionais</h2>
-              <p>Sessão exclusiva para cadastrar, editar, visualizar e baixar os exames ocupacionais dos técnicos.</p>
+              <p>Gerencie os exames por técnico. O Dashboard fica apenas com os alertas de vencimento.</p>
             </div>
           </div>
 
-          <div class="grid grid-2">
+          <div class="aso-page-layout">
             <div class="card">
-              <h3>Selecionar técnico</h3>
-              <div class="field">
-                <label>Técnico</label>
-                <select id="asoTecnicoSelect" onchange="selecionarTecnicoAso(this.value)">
-                  <option value="">Selecione um técnico</option>
-                </select>
+              <div class="aso-select-card">
+                <div>
+                  <h3>Selecionar técnico</h3>
+                  <p class="small">Escolha um técnico para ver o parecer da ASO e editar os exames.</p>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Técnico</label>
+                    <select id="asoTecnicoSelect" onchange="selecionarTecnicoAso(this.value)">
+                      <option value="">Selecione um técnico</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="foto-empty" style="margin-top:0;">
+                  <strong>Como funciona</strong><br>
+                  Glicemia vence em 1 ano. Eletrocardiograma e laudo psicossocial vencem em 2 anos. O sistema calcula a validade pela data do exame, mas permite ajuste manual.
+                </div>
               </div>
-              <p class="small">Ao selecionar o técnico, os exames aparecem abaixo para edição.</p>
-              <div id="asoResumoTecnico" class="aso-status-grid"></div>
+            </div>
+
+            <div id="asoResumoTecnico" class="aso-parecer-card">
+              <p class="small">Selecione um técnico para visualizar o parecer da ASO.</p>
+            </div>
+
+            <div id="asoEditorCard" class="card aso-editor-card hidden-by-aso">
+              <div class="aso-editor-header topbar" style="margin-bottom:10px;">
+                <div>
+                  <h3>Editar exames do técnico</h3>
+                  <p class="small">Preencha data, validade, arquivo e observação de cada exame.</p>
+                </div>
+                <button id="btnSalvarTodosAso" class="btn btn-green hidden" type="button" onclick="salvarTodosDocumentosOcupacionais()">Salvar todos</button>
+              </div>
+              <div id="asoDocumentosAdmin" class="aso-editor-grid"></div>
+              <div id="asoMsg" class="msg"></div>
             </div>
 
             <div class="card">
-              <h3>Alertas de vencimento</h3>
-              <p class="small">Aqui aparecem apenas os exames vencidos, vencendo em até 30 dias ou não informados.</p>
-              <div id="asoAlertasAdmin"></div>
-            </div>
-          </div>
-
-          <div class="card" style="margin-top:18px;">
-            <div class="topbar" style="margin-bottom:10px;">
-              <div>
-                <h3 style="margin:0;color:var(--azul-escuro);">Editar exames do técnico</h3>
-                <p class="small">Informe a data do exame. O sistema calcula a validade padrão, mas você pode ajustar manualmente quando necessário.</p>
+              <div class="topbar" style="margin-bottom:10px;">
+                <div>
+                  <h3 style="margin:0;color:var(--azul-escuro);">Alertas gerais de ASO</h3>
+                  <p class="small">Lista de exames vencidos, vencendo em até 30 dias, não informados ou sem arquivo anexado.</p>
+                </div>
+                <button class="btn btn-light btn-mini" type="button" onclick="renderAsoAdmin(document.getElementById('asoTecnicoSelect')?.value || '')">Atualizar</button>
               </div>
-              <button id="btnSalvarTodosAso" class="btn btn-green hidden" type="button" onclick="salvarTodosDocumentosOcupacionais()">Salvar todos</button>
+              <div id="asoAlertasAdmin" class="aso-alertas-lista"></div>
             </div>
-            <div id="asoDocumentosAdmin"></div>
-            <div id="asoMsg" class="msg"></div>
           </div>
         </section>
 
@@ -2882,15 +2987,18 @@
       renderSelectTecnicosAso(valorAtual);
       const tecnicoId = valorAtual;
       if (select && tecnicoId && select.value !== tecnicoId) select.value = tecnicoId;
+
       const resumo = document.getElementById("asoResumoTecnico");
       const docsBox = document.getElementById("asoDocumentosAdmin");
+      const editorCard = document.getElementById("asoEditorCard");
       const alertasBox = document.getElementById("asoAlertasAdmin");
       const btnTodos = document.getElementById("btnSalvarTodosAso");
       if (btnTodos) btnTodos.classList.toggle("hidden", !tecnicoId);
+      if (editorCard) editorCard.classList.toggle("hidden-by-aso", !tecnicoId);
 
       const alertas = montarAlertasDocumentosOcupacionais();
       if (alertasBox) {
-        alertasBox.innerHTML = alertas.length ? alertas.slice(0, 10).map(a => `
+        alertasBox.innerHTML = alertas.length ? alertas.map(a => `
           <div class="aso-alerta-item">
             <strong>${escapeHtml(a.tecnicoNome)}</strong><br>
             <span class="badge ${a.classe}">${escapeHtml(a.status)}</span>
@@ -2900,8 +3008,8 @@
       }
 
       if (!tecnicoId) {
-        if (resumo) resumo.innerHTML = `<p class="small">Selecione um técnico para ver o status.</p>`;
-        if (docsBox) docsBox.innerHTML = `<p class="foto-empty">Selecione um técnico acima para cadastrar ou atualizar os exames.</p>`;
+        if (resumo) resumo.innerHTML = `<p class="small">Selecione um técnico para visualizar o parecer da ASO.</p>`;
+        if (docsBox) docsBox.innerHTML = "";
         const msg = document.getElementById("asoMsg");
         if (msg) clearMsg("asoMsg");
         return;
@@ -2909,17 +3017,41 @@
 
       const tecnico = tecnicosCache.find(t => t.id === tecnicoId);
       const geral = statusGeralDocumentosTecnico(tecnicoId);
+      const alertasTecnico = alertas.filter(a => a.tecnicoId === tecnicoId);
+
       if (resumo) {
         resumo.innerHTML = `
-          <div class="aso-status-item">
-            <strong>${escapeHtml(tecnico?.nome || "Técnico")}</strong><br>
-            <span class="badge ${geral.classe}">Status: ${geral.texto}</span>
+          <div class="aso-parecer-header">
+            <div>
+              <h3>Atestado de saúde ocupacional</h3>
+              <p class="small" style="margin:6px 0 0;">${escapeHtml(tecnico?.nome || "Técnico")}</p>
+            </div>
+            <span class="badge ${geral.classe}">Status: ${escapeHtml(geral.texto)}</span>
           </div>
-          ${TIPOS_DOCUMENTOS_OCUPACIONAIS.map(info => {
-            const doc = getDocTecnicoPorTipo(tecnicoId, info.tipo);
-            const st = statusDocumentoOcupacional(doc);
-            return `<div class="aso-status-item"><strong>${escapeHtml(info.nome)}</strong><br><span class="badge ${st.classe}">${escapeHtml(st.texto)}</span><br><span class="small">${escapeHtml(st.detalhe)}</span></div>`;
-          }).join("")}
+
+          <div class="aso-documentos-grid">
+            ${TIPOS_DOCUMENTOS_OCUPACIONAIS.map(info => {
+              const doc = getDocTecnicoPorTipo(tecnicoId, info.tipo);
+              const st = statusDocumentoOcupacional(doc);
+              const temArquivo = !!doc?.storage_path;
+              return `
+                <div class="aso-doc-resumo-card">
+                  <strong>${escapeHtml(info.nome)}</strong>
+                  <span class="badge ${st.classe}">${escapeHtml(st.texto)}</span><br>
+                  <span class="small">${escapeHtml(st.detalhe)}</span><br>
+                  <span class="small">Arquivo: ${temArquivo ? "anexado" : "não anexado"}</span>
+                  ${temArquivo ? `<div class="doc-actions"><button class="btn btn-light btn-mini" type="button" onclick="abrirDocumentoOcupacional('${tecnicoId}', '${info.tipo}')">Visualizar</button><button class="btn btn-light btn-mini" type="button" onclick="baixarDocumentoOcupacional('${tecnicoId}', '${info.tipo}')">Baixar</button></div>` : ""}
+                </div>
+              `;
+            }).join("")}
+          </div>
+
+          ${alertasTecnico.length ? `
+            <div class="aso-alerta-tecnico">
+              <strong>Atenção neste técnico:</strong><br>
+              ${alertasTecnico.map(a => `• ${escapeHtml(a.documento)} - ${escapeHtml(a.detalhe)}`).join("<br>")}
+            </div>
+          ` : `<p class="small" style="margin-top:12px;"><strong>Parecer:</strong> documentação ocupacional regular no momento.</p>`}
         `;
       }
 
@@ -5555,6 +5687,95 @@
       font-size: 12px;
       color: var(--muted);
       font-weight: 700;
+    }
+
+
+
+    .aso-page-layout {
+      display: grid;
+      gap: 18px;
+    }
+
+    .aso-select-card {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+      align-items: end;
+    }
+
+    .aso-parecer-card {
+      border: 1px solid #d7e5ff;
+      background: linear-gradient(135deg, #ffffff, #f5faff);
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .aso-parecer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .aso-parecer-header h3,
+    .aso-editor-header h3 {
+      margin: 0;
+      color: var(--azul-escuro);
+    }
+
+    .aso-documentos-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .aso-doc-resumo-card {
+      background: #fff;
+      border: 1px solid #e4e7ec;
+      border-radius: 16px;
+      padding: 13px;
+    }
+
+    .aso-doc-resumo-card strong {
+      display: block;
+      color: var(--azul-escuro);
+      margin-bottom: 7px;
+    }
+
+    .aso-editor-card.hidden-by-aso {
+      display: none;
+    }
+
+    .aso-editor-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      align-items: start;
+    }
+
+    .aso-alertas-lista {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 10px;
+    }
+
+    .aso-alerta-tecnico {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid #fedf89;
+      background: #fffaeb;
+      color: #93370d;
+      border-radius: 14px;
+    }
+
+    @media (max-width: 1100px) {
+      .aso-select-card,
+      .aso-documentos-grid,
+      .aso-editor-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
   </style>
