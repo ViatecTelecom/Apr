@@ -1420,6 +1420,14 @@
       background: #fff;
     }
 
+    #cardAlertasAsoDashboard .aso-alerta-item:nth-of-type(n+6) {
+      display: none;
+    }
+
+    .aso-doc-card input[readonly] {
+      background: #f8fafc;
+    }
+
     .doc-actions {
       display: flex;
       gap: 8px;
@@ -1540,9 +1548,17 @@
           </div>
 
           <div id="cardAlertasAsoDashboard" class="card" style="margin-top:18px;">
-            <h3>Alertas de ASO / Exames ocupacionais</h3>
-            <p class="small">Documentos vencidos, vencendo em até 30 dias ou não informados.</p>
+            <div class="metric">
+              <div>
+                <h3 style="margin-bottom:6px;">Alertas de ASO</h3>
+                <p class="small">Resumo rápido de exames vencidos, a vencer ou pendentes. A edição fica somente na sessão <strong>ASO / Exames</strong>.</p>
+              </div>
+              <div id="metricAlertasAso" class="metric-value">0</div>
+            </div>
             <div id="listaAlertasAsoDashboard"></div>
+            <div class="row-actions" style="margin-top:12px;">
+              <button class="btn btn-light btn-mini" type="button" onclick="showTab('aso')">Abrir ASO / Exames</button>
+            </div>
           </div>
         </section>
 
@@ -1909,7 +1925,7 @@
           <div class="topbar">
             <div>
               <h2>ASO / Exames ocupacionais</h2>
-              <p>Controle os exames ocupacionais vinculados a cada técnico.</p>
+              <p>Sessão exclusiva para cadastrar, editar, visualizar e baixar os exames ocupacionais dos técnicos.</p>
             </div>
           </div>
 
@@ -1918,23 +1934,31 @@
               <h3>Selecionar técnico</h3>
               <div class="field">
                 <label>Técnico</label>
-                <select id="asoTecnicoSelect" onchange="renderAsoAdmin()">
+                <select id="asoTecnicoSelect" onchange="selecionarTecnicoAso(this.value)">
                   <option value="">Selecione um técnico</option>
                 </select>
               </div>
+              <p class="small">Ao selecionar o técnico, os exames aparecem abaixo para edição.</p>
               <div id="asoResumoTecnico" class="aso-status-grid"></div>
             </div>
 
             <div class="card">
-              <h3>Alertas</h3>
+              <h3>Alertas de vencimento</h3>
+              <p class="small">Aqui aparecem apenas os exames vencidos, vencendo em até 30 dias ou não informados.</p>
               <div id="asoAlertasAdmin"></div>
             </div>
           </div>
 
           <div class="card" style="margin-top:18px;">
-            <h3>Documentos do técnico</h3>
-            <p class="small">Informe a data do exame. O sistema calcula a validade padrão, mas você pode ajustar manualmente quando necessário.</p>
+            <div class="topbar" style="margin-bottom:10px;">
+              <div>
+                <h3 style="margin:0;color:var(--azul-escuro);">Editar exames do técnico</h3>
+                <p class="small">Informe a data do exame. O sistema calcula a validade padrão, mas você pode ajustar manualmente quando necessário.</p>
+              </div>
+              <button id="btnSalvarTodosAso" class="btn btn-green hidden" type="button" onclick="salvarTodosDocumentosOcupacionais()">Salvar todos</button>
+            </div>
             <div id="asoDocumentosAdmin"></div>
+            <div id="asoMsg" class="msg"></div>
           </div>
         </section>
 
@@ -2798,19 +2822,21 @@
 
     function renderAlertasAsoDashboard() {
       const container = document.getElementById("listaAlertasAsoDashboard");
+      const metric = document.getElementById("metricAlertasAso");
       if (!container) return;
       const alertas = montarAlertasDocumentosOcupacionais();
+      if (metric) metric.textContent = alertas.length;
       if (!alertas.length) {
-        container.innerHTML = `<p class="small">Nenhum documento ocupacional vencido ou a vencer nos próximos 30 dias.</p>`;
+        container.innerHTML = `<p class="small">Nenhum exame ocupacional vencido ou a vencer nos próximos 30 dias.</p>`;
         return;
       }
-      container.innerHTML = alertas.slice(0, 12).map(a => `
+      container.innerHTML = alertas.slice(0, 5).map(a => `
         <div class="aso-alerta-item">
           <strong>${escapeHtml(a.tecnicoNome)}</strong><br>
           <span class="badge ${a.classe}">${escapeHtml(a.status)}</span>
           <span class="small">${escapeHtml(a.documento)} - ${escapeHtml(a.detalhe)}</span>
         </div>
-      `).join("");
+      `).join("") + (alertas.length > 5 ? `<p class="small">+ ${alertas.length - 5} alerta(s). Abra a sessão ASO / Exames para ver todos.</p>` : "");
     }
 
     function montarAlertasDocumentosOcupacionais() {
@@ -2837,21 +2863,30 @@
       return alertas.sort((a, b) => b.ordem - a.ordem || String(a.validade).localeCompare(String(b.validade)) || a.tecnicoNome.localeCompare(b.tecnicoNome, "pt-BR"));
     }
 
-    function renderSelectTecnicosAso() {
+    function renderSelectTecnicosAso(valorPreferido = "") {
       const select = document.getElementById("asoTecnicoSelect");
       if (!select) return;
-      const atual = select.value;
+      const atual = valorPreferido || select.value || "";
       const lista = [...(tecnicosCache || [])].sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
       select.innerHTML = `<option value="">Selecione um técnico</option>` + lista.map(t => `<option value="${t.id}">${escapeHtml(t.nome || "Sem nome")}${t.ativo ? "" : " (inativo)"}</option>`).join("");
       if (atual && lista.some(t => t.id === atual)) select.value = atual;
     }
 
-    function renderAsoAdmin() {
-      renderSelectTecnicosAso();
-      const tecnicoId = document.getElementById("asoTecnicoSelect")?.value || "";
+    function selecionarTecnicoAso(tecnicoId) {
+      renderAsoAdmin(tecnicoId || "");
+    }
+
+    function renderAsoAdmin(tecnicoIdParam = "") {
+      const select = document.getElementById("asoTecnicoSelect");
+      const valorAtual = tecnicoIdParam || select?.value || "";
+      renderSelectTecnicosAso(valorAtual);
+      const tecnicoId = valorAtual;
+      if (select && tecnicoId && select.value !== tecnicoId) select.value = tecnicoId;
       const resumo = document.getElementById("asoResumoTecnico");
       const docsBox = document.getElementById("asoDocumentosAdmin");
       const alertasBox = document.getElementById("asoAlertasAdmin");
+      const btnTodos = document.getElementById("btnSalvarTodosAso");
+      if (btnTodos) btnTodos.classList.toggle("hidden", !tecnicoId);
 
       const alertas = montarAlertasDocumentosOcupacionais();
       if (alertasBox) {
@@ -2867,6 +2902,8 @@
       if (!tecnicoId) {
         if (resumo) resumo.innerHTML = `<p class="small">Selecione um técnico para ver o status.</p>`;
         if (docsBox) docsBox.innerHTML = `<p class="foto-empty">Selecione um técnico acima para cadastrar ou atualizar os exames.</p>`;
+        const msg = document.getElementById("asoMsg");
+        if (msg) clearMsg("asoMsg");
         return;
       }
 
@@ -2925,7 +2962,7 @@
           </div>
 
           <div class="doc-actions">
-            <button class="btn btn-primary btn-mini" type="button" onclick="salvarDocumentoOcupacional('${tipo}')">Salvar ${escapeHtml(info.nome)}</button>
+            <button class="btn btn-primary btn-mini" type="button" onclick="salvarDocumentoOcupacional('${tipo}')">Salvar alterações</button>
             ${temArquivo ? `<button class="btn btn-light btn-mini" type="button" onclick="abrirDocumentoOcupacional('${tecnicoId}', '${tipo}')">Visualizar</button>` : ""}
             ${temArquivo ? `<button class="btn btn-light btn-mini" type="button" onclick="baixarDocumentoOcupacional('${tecnicoId}', '${tipo}')">Baixar</button>` : ""}
             ${temArquivo ? `<button class="btn btn-danger btn-mini" type="button" onclick="removerArquivoDocumentoOcupacional('${tipo}')">Remover arquivo</button>` : ""}
@@ -2942,16 +2979,16 @@
       validadeEl.value = adicionarAnosData(dataEl.value, info.anosValidade);
     }
 
-    async function salvarDocumentoOcupacional(tipo) {
+    async function salvarDocumentoOcupacional(tipo, silencioso = false) {
       if (perfilAtual?.perfil !== "admin") {
         alert("Somente admin pode cadastrar documentos ocupacionais.");
-        return;
+        return false;
       }
 
       const tecnicoId = document.getElementById("asoTecnicoSelect")?.value || "";
       if (!tecnicoId) {
         alert("Selecione um técnico.");
-        return;
+        return false;
       }
 
       const info = tipoDocumentoInfo(tipo);
@@ -3002,12 +3039,48 @@
         }
 
         if (error) throw error;
-        alert(`${info.nome} salvo com sucesso.`);
-        await carregarDocumentosOcupacionais();
-        renderAsoAdmin();
+        if (!silencioso) {
+          setMsg("asoMsg", "ok", `${info.nome} salvo com sucesso.`);
+          await carregarDocumentosOcupacionais();
+          renderAsoAdmin(tecnicoId);
+        }
+        return true;
       } catch (err) {
-        alert("Erro ao salvar documento: " + (err.message || String(err)));
+        if (!silencioso) setMsg("asoMsg", "err", "Erro ao salvar documento: " + (err.message || String(err)));
+        else console.error("Erro ao salvar documento", tipo, err);
+        return false;
       }
+    }
+
+    async function salvarTodosDocumentosOcupacionais() {
+      if (perfilAtual?.perfil !== "admin") {
+        alert("Somente admin pode cadastrar documentos ocupacionais.");
+        return;
+      }
+      const tecnicoId = document.getElementById("asoTecnicoSelect")?.value || "";
+      if (!tecnicoId) {
+        setMsg("asoMsg", "err", "Selecione um técnico antes de salvar.");
+        return;
+      }
+      clearMsg("asoMsg");
+      const btn = document.getElementById("btnSalvarTodosAso");
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Salvando...";
+      }
+      let ok = 0;
+      for (const info of TIPOS_DOCUMENTOS_OCUPACIONAIS) {
+        const salvou = await salvarDocumentoOcupacional(info.tipo, true);
+        if (salvou) ok++;
+      }
+      await carregarDocumentosOcupacionais();
+      renderAsoAdmin(tecnicoId);
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Salvar todos";
+      }
+      if (ok === TIPOS_DOCUMENTOS_OCUPACIONAIS.length) setMsg("asoMsg", "ok", "Exames ocupacionais salvos com sucesso.");
+      else setMsg("asoMsg", "err", `Alguns exames não foram salvos. Salvos: ${ok}/${TIPOS_DOCUMENTOS_OCUPACIONAIS.length}.`);
     }
 
     async function getSignedUrlDocumentoOcupacional(tecnicoId, tipo) {
