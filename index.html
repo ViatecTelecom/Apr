@@ -1525,6 +1525,36 @@
       }
     }
 
+  
+
+    /* ASO v39 - layout mais organizado */
+    .aso-page-clean { display: grid; gap: 16px; }
+    .aso-select-clean { display: grid; grid-template-columns: 0.85fr 1.4fr; gap: 16px; align-items: end; }
+    .aso-select-clean h3, .aso-parecer-card h3, .aso-editor-header h3 { margin: 0 0 6px; color: var(--azul-escuro); }
+    .aso-workspace { display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: 16px; align-items: start; }
+    .aso-sticky-panel { position: sticky; top: 18px; }
+    .aso-parecer-card { border: 1px solid #d7e5ff; background: linear-gradient(135deg, #ffffff, #f5faff); border-radius: 18px; padding: 18px; }
+    .aso-parecer-header { display: grid; gap: 10px; margin-bottom: 14px; }
+    .aso-tecnico-nome { font-size: 19px; font-weight: 900; color: var(--texto); margin-top: 4px; }
+    .aso-status-grande { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid #e4e7ec; border-radius: 16px; padding: 12px; background: #fff; margin-bottom: 12px; }
+    .aso-documentos-lista { display: grid; gap: 9px; }
+    .aso-doc-linha { display: grid; grid-template-columns: minmax(120px, 0.9fr) auto; gap: 8px; align-items: center; border: 1px solid #e4e7ec; border-radius: 14px; padding: 10px; background: #fff; }
+    .aso-doc-linha strong { color: var(--azul-escuro); }
+    .aso-doc-linha .small { grid-column: 1 / -1; }
+    .aso-editor-grid { display: grid !important; grid-template-columns: 1fr !important; gap: 12px; }
+    .aso-doc-edit { border: 1px solid #e4e7ec; border-radius: 16px; background: #fff; overflow: hidden; }
+    .aso-doc-edit summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px; background: #f8fafc; border-bottom: 1px solid #e4e7ec; }
+    .aso-doc-edit summary::-webkit-details-marker { display: none; }
+    .aso-doc-edit-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .aso-doc-edit-title strong { color: var(--azul-escuro); font-size: 15px; }
+    .aso-doc-edit-body { padding: 14px; }
+    .aso-alertas-details summary { cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; list-style: none; }
+    .aso-alertas-details summary::-webkit-details-marker { display: none; }
+    .aso-alertas-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+    .aso-alerta-item { border: 1px solid #e4e7ec; border-radius: 14px; padding: 12px; background: #fff; }
+    @media (max-width: 1200px) { .aso-workspace, .aso-select-clean { grid-template-columns: 1fr; } .aso-sticky-panel { position: static; } }
+    @media (max-width: 650px) { .aso-doc-edit summary, .aso-alertas-details summary { flex-direction: column; align-items: flex-start; } .aso-doc-linha { grid-template-columns: 1fr; } }
+
   </style>
 </head>
 
@@ -2014,56 +2044,56 @@
           <div class="topbar">
             <div>
               <h2>ASO / Exames ocupacionais</h2>
-              <p>Gerencie os exames por técnico. O Dashboard fica apenas com os alertas de vencimento.</p>
+              <p>Selecione um técnico, veja o parecer ocupacional e edite os exames em uma tela mais organizada.</p>
             </div>
           </div>
 
-          <div class="aso-page-layout">
-            <div class="card">
-              <div class="aso-select-card">
-                <div>
-                  <h3>Selecionar técnico</h3>
-                  <p class="small">Escolha um técnico para ver o parecer da ASO e editar os exames.</p>
-                  <div class="field" style="margin-bottom:0;">
-                    <label>Técnico</label>
-                    <select id="asoTecnicoSelect" onchange="selecionarTecnicoAso(this.value)">
-                      <option value="">Selecione um técnico</option>
-                    </select>
+          <div class="aso-page-clean">
+            <div class="card aso-select-clean">
+              <div>
+                <h3>1. Selecionar técnico</h3>
+                <p class="small">Escolha o técnico para consultar e atualizar os exames ocupacionais.</p>
+              </div>
+              <div class="field" style="margin:0;">
+                <label>Técnico</label>
+                <select id="asoTecnicoSelect" onchange="selecionarTecnicoAso(this.value)">
+                  <option value="">Selecione um técnico</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="aso-workspace">
+              <div id="asoResumoTecnico" class="card aso-parecer-card aso-sticky-panel">
+                <h3>2. Parecer da ASO</h3>
+                <p class="small">Selecione um técnico para visualizar o parecer da ASO.</p>
+              </div>
+
+              <div id="asoEditorCard" class="card aso-editor-card hidden-by-aso">
+                <div class="aso-editor-header topbar" style="margin-bottom:10px;">
+                  <div>
+                    <h3>3. Editar exames</h3>
+                    <p class="small">Abra cada exame para preencher data, validade, arquivo e observação.</p>
                   </div>
+                  <button id="btnSalvarTodosAso" class="btn btn-green hidden" type="button" onclick="salvarTodosDocumentosOcupacionais()">Salvar todos</button>
                 </div>
-                <div class="foto-empty" style="margin-top:0;">
-                  <strong>Como funciona</strong><br>
-                  Glicemia vence em 1 ano. Eletrocardiograma e laudo psicossocial vencem em 2 anos. O sistema calcula a validade pela data do exame, mas permite ajuste manual.
-                </div>
+                <div id="asoDocumentosAdmin" class="aso-editor-grid"></div>
+                <div id="asoMsg" class="msg"></div>
               </div>
             </div>
 
-            <div id="asoResumoTecnico" class="aso-parecer-card">
-              <p class="small">Selecione um técnico para visualizar o parecer da ASO.</p>
-            </div>
-
-            <div id="asoEditorCard" class="card aso-editor-card hidden-by-aso">
-              <div class="aso-editor-header topbar" style="margin-bottom:10px;">
+            <details class="card aso-alertas-details">
+              <summary>
                 <div>
-                  <h3>Editar exames do técnico</h3>
-                  <p class="small">Preencha data, validade, arquivo e observação de cada exame.</p>
+                  <strong>Alertas gerais de ASO</strong><br>
+                  <span class="small">Vencidos, vencendo em até 30 dias, não informados ou sem arquivo.</span>
                 </div>
-                <button id="btnSalvarTodosAso" class="btn btn-green hidden" type="button" onclick="salvarTodosDocumentosOcupacionais()">Salvar todos</button>
-              </div>
-              <div id="asoDocumentosAdmin" class="aso-editor-grid"></div>
-              <div id="asoMsg" class="msg"></div>
-            </div>
-
-            <div class="card">
-              <div class="topbar" style="margin-bottom:10px;">
-                <div>
-                  <h3 style="margin:0;color:var(--azul-escuro);">Alertas gerais de ASO</h3>
-                  <p class="small">Lista de exames vencidos, vencendo em até 30 dias, não informados ou sem arquivo anexado.</p>
-                </div>
+                <span id="asoAlertasTotal" class="badge aguardando_assinaturas">0 alerta(s)</span>
+              </summary>
+              <div class="row-actions" style="margin:12px 0;justify-content:flex-end;">
                 <button class="btn btn-light btn-mini" type="button" onclick="renderAsoAdmin(document.getElementById('asoTecnicoSelect')?.value || '')">Atualizar</button>
               </div>
               <div id="asoAlertasAdmin" class="aso-alertas-lista"></div>
-            </div>
+            </details>
           </div>
         </section>
 
@@ -2997,6 +3027,8 @@
       if (editorCard) editorCard.classList.toggle("hidden-by-aso", !tecnicoId);
 
       const alertas = montarAlertasDocumentosOcupacionais();
+      const alertasTotal = document.getElementById("asoAlertasTotal");
+      if (alertasTotal) alertasTotal.textContent = `${alertas.length} alerta(s)`;
       if (alertasBox) {
         alertasBox.innerHTML = alertas.length ? alertas.map(a => `
           <div class="aso-alerta-item">
@@ -3023,23 +3055,29 @@
         resumo.innerHTML = `
           <div class="aso-parecer-header">
             <div>
-              <h3>Atestado de saúde ocupacional</h3>
-              <p class="small" style="margin:6px 0 0;">${escapeHtml(tecnico?.nome || "Técnico")}</p>
+              <h3>2. Parecer da ASO</h3>
+              <div class="aso-tecnico-nome">${escapeHtml(tecnico?.nome || "Técnico")}</div>
             </div>
-            <span class="badge ${geral.classe}">Status: ${escapeHtml(geral.texto)}</span>
           </div>
 
-          <div class="aso-documentos-grid">
+          <div class="aso-status-grande">
+            <div>
+              <strong>Status geral</strong><br>
+              <span class="small">Baseado nos exames obrigatórios cadastrados.</span>
+            </div>
+            <span class="badge ${geral.classe}">${escapeHtml(geral.texto)}</span>
+          </div>
+
+          <div class="aso-documentos-lista">
             ${TIPOS_DOCUMENTOS_OCUPACIONAIS.map(info => {
               const doc = getDocTecnicoPorTipo(tecnicoId, info.tipo);
               const st = statusDocumentoOcupacional(doc);
               const temArquivo = !!doc?.storage_path;
               return `
-                <div class="aso-doc-resumo-card">
+                <div class="aso-doc-linha">
                   <strong>${escapeHtml(info.nome)}</strong>
-                  <span class="badge ${st.classe}">${escapeHtml(st.texto)}</span><br>
-                  <span class="small">${escapeHtml(st.detalhe)}</span><br>
-                  <span class="small">Arquivo: ${temArquivo ? "anexado" : "não anexado"}</span>
+                  <span class="badge ${st.classe}">${escapeHtml(st.texto)}</span>
+                  <span class="small">${escapeHtml(st.detalhe)} • Arquivo: ${temArquivo ? "anexado" : "não anexado"}</span>
                   ${temArquivo ? `<div class="doc-actions"><button class="btn btn-light btn-mini" type="button" onclick="abrirDocumentoOcupacional('${tecnicoId}', '${info.tipo}')">Visualizar</button><button class="btn btn-light btn-mini" type="button" onclick="baixarDocumentoOcupacional('${tecnicoId}', '${info.tipo}')">Baixar</button></div>` : ""}
                 </div>
               `;
@@ -3066,40 +3104,46 @@
       const st = statusDocumentoOcupacional(doc);
       const temArquivo = !!doc.storage_path;
       return `
-        <div class="aso-doc-card">
-          <h4>${escapeHtml(info.nome)}</h4>
-          <span class="badge ${st.classe}">${escapeHtml(st.texto)}</span>
-          <span class="small">${escapeHtml(st.detalhe)}</span>
-
-          <div class="grid grid-2" style="margin-top:12px;">
-            <div class="field">
-              <label>Data do exame/laudo</label>
-              <input id="doc_${tipo}_data" type="date" value="${escapeHtml(doc.data_exame || "")}" onchange="calcularValidadeDocumentoNoForm('${tipo}')">
+        <details class="aso-doc-edit" ${!temArquivo && !doc.validade ? "" : "open"}>
+          <summary>
+            <div class="aso-doc-edit-title">
+              <strong>${escapeHtml(info.nome)}</strong>
+              <span class="badge ${st.classe}">${escapeHtml(st.texto)}</span>
             </div>
+            <span class="small">${escapeHtml(st.detalhe)}</span>
+          </summary>
+
+          <div class="aso-doc-edit-body">
+            <div class="grid grid-2">
+              <div class="field">
+                <label>Data do exame/laudo</label>
+                <input id="doc_${tipo}_data" type="date" value="${escapeHtml(doc.data_exame || "")}" onchange="calcularValidadeDocumentoNoForm('${tipo}')">
+              </div>
+              <div class="field">
+                <label>Validade</label>
+                <input id="doc_${tipo}_validade" type="date" value="${escapeHtml(doc.validade || "")}">
+              </div>
+            </div>
+
             <div class="field">
-              <label>Validade</label>
-              <input id="doc_${tipo}_validade" type="date" value="${escapeHtml(doc.validade || "")}">
+              <label>Observação</label>
+              <input id="doc_${tipo}_observacao" value="${escapeHtml(doc.observacao || "")}" placeholder="Observação sobre o documento">
+            </div>
+
+            <div class="field">
+              <label>Arquivo do documento</label>
+              <input id="doc_${tipo}_arquivo" type="file" accept="application/pdf,image/*">
+              <p class="small">${temArquivo ? `Arquivo atual: ${escapeHtml(doc.nome_arquivo || "documento anexado")}` : "Nenhum arquivo anexado."}</p>
+            </div>
+
+            <div class="doc-actions">
+              <button class="btn btn-primary btn-mini" type="button" onclick="salvarDocumentoOcupacional('${tipo}')">Salvar alterações</button>
+              ${temArquivo ? `<button class="btn btn-light btn-mini" type="button" onclick="abrirDocumentoOcupacional('${tecnicoId}', '${tipo}')">Visualizar</button>` : ""}
+              ${temArquivo ? `<button class="btn btn-light btn-mini" type="button" onclick="baixarDocumentoOcupacional('${tecnicoId}', '${tipo}')">Baixar</button>` : ""}
+              ${temArquivo ? `<button class="btn btn-danger btn-mini" type="button" onclick="removerArquivoDocumentoOcupacional('${tipo}')">Remover arquivo</button>` : ""}
             </div>
           </div>
-
-          <div class="field">
-            <label>Observação</label>
-            <input id="doc_${tipo}_observacao" value="${escapeHtml(doc.observacao || "")}" placeholder="Observação sobre o documento">
-          </div>
-
-          <div class="field">
-            <label>Arquivo do documento</label>
-            <input id="doc_${tipo}_arquivo" type="file" accept="application/pdf,image/*">
-            <p class="small">${temArquivo ? `Arquivo atual: ${escapeHtml(doc.nome_arquivo || "documento anexado")}` : "Nenhum arquivo anexado."}</p>
-          </div>
-
-          <div class="doc-actions">
-            <button class="btn btn-primary btn-mini" type="button" onclick="salvarDocumentoOcupacional('${tipo}')">Salvar alterações</button>
-            ${temArquivo ? `<button class="btn btn-light btn-mini" type="button" onclick="abrirDocumentoOcupacional('${tecnicoId}', '${tipo}')">Visualizar</button>` : ""}
-            ${temArquivo ? `<button class="btn btn-light btn-mini" type="button" onclick="baixarDocumentoOcupacional('${tecnicoId}', '${tipo}')">Baixar</button>` : ""}
-            ${temArquivo ? `<button class="btn btn-danger btn-mini" type="button" onclick="removerArquivoDocumentoOcupacional('${tipo}')">Remover arquivo</button>` : ""}
-          </div>
-        </div>
+        </details>
       `;
     }
 
