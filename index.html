@@ -1811,7 +1811,7 @@
               </p>
 
               <div class="foto-actions">
-                <label class="btn btn-green" for="inputFotosApr">+ Adicionar fotos</label>
+                <label class="btn btn-green" for="inputFotosApr">📷 Tirar foto</label>
                 <input
                   id="inputFotosApr"
                   class="foto-input"
@@ -1821,7 +1821,16 @@
                   multiple
                   onchange="selecionarFotosApr(event)"
                 >
-                <span class="small">Recomendado: local, técnicos/EPI e condição de risco.</span>
+                <label class="btn btn-light" for="inputFotosAprGaleria">🖼️ Escolher da galeria</label>
+                <input
+                  id="inputFotosAprGaleria"
+                  class="foto-input"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onchange="selecionarFotosApr(event)"
+                >
+                <span class="small">Use a galeria para anexar fotos tiradas pelo Timestamp Camera.</span>
               </div>
 
               <div id="fotosAprGrid" class="foto-grid"></div>
@@ -2341,13 +2350,14 @@
 
       <div class="form-section">
         <h4>Selfie do técnico</h4>
-        <p class="small">Tire uma selfie no momento da assinatura para comprovar quem assinou a APR.</p>
+        <p class="small">Tire uma selfie no momento da assinatura ou escolha uma imagem da galeria, caso tenha usado outro aplicativo de câmera.</p>
         <div class="row-actions">
-          <button class="btn btn-green" type="button" onclick="abrirCameraSelfieAssinatura()">Tirar selfie</button>
-          <label class="btn btn-light" for="inputSelfieAssinatura">Selecionar selfie</label>
+          <button class="btn btn-green" type="button" onclick="abrirCameraSelfieAssinatura()">📷 Tirar selfie</button>
+          <label class="btn btn-light" for="inputSelfieAssinaturaGaleria">🖼️ Escolher da galeria</label>
           <button class="btn btn-light" type="button" onclick="limparSelfieAssinatura()">Limpar selfie</button>
         </div>
         <input id="inputSelfieAssinatura" class="foto-input" type="file" accept="image/*" capture="user" onchange="selecionarSelfieAssinatura(event)">
+        <input id="inputSelfieAssinaturaGaleria" class="foto-input" type="file" accept="image/*" onchange="selecionarSelfieAssinatura(event)">
         <div id="selfieAssinaturaPreview" class="foto-grid"></div>
       </div>
 
@@ -5177,8 +5187,10 @@
             ${htmlAssinaturasTecnicos}
             ${item.erro_sync ? `<p class="danger-text">Último erro: ${escapeHtml(item.erro_sync)}</p>` : ""}
             <div class="row-actions" style="margin-top:12px;">
-              <label class="btn btn-light btn-mini" for="inputFotosOffline-${item.offline_id}" ${estaSincronizando ? 'style="pointer-events:none;opacity:.55;"' : ''}>+ Adicionar fotos</label>
+              <label class="btn btn-light btn-mini" for="inputFotosOffline-${item.offline_id}" ${estaSincronizando ? 'style="pointer-events:none;opacity:.55;"' : ''}>📷 Tirar foto</label>
               <input id="inputFotosOffline-${item.offline_id}" class="foto-input" type="file" accept="image/*" capture="environment" multiple onchange="adicionarFotosOffline('${item.offline_id}', event)" ${estaSincronizando ? "disabled" : ""}>
+              <label class="btn btn-light btn-mini" for="inputFotosOfflineGaleria-${item.offline_id}" ${estaSincronizando ? 'style="pointer-events:none;opacity:.55;"' : ''}>🖼️ Galeria</label>
+              <input id="inputFotosOfflineGaleria-${item.offline_id}" class="foto-input" type="file" accept="image/*" multiple onchange="adicionarFotosOffline('${item.offline_id}', event)" ${estaSincronizando ? "disabled" : ""}>
               <button class="btn btn-primary btn-mini" onclick="sincronizarAprOffline('${item.offline_id}')" ${navigator.onLine && !estaSincronizando ? "" : "disabled"}>${estaSincronizando ? "Enviando..." : "Enviar agora"}</button>
               <button class="btn btn-danger btn-mini" onclick="excluirAprOffline('${item.offline_id}')" ${estaSincronizando ? "disabled" : ""}>Excluir pendência</button>
             </div>
@@ -6493,8 +6505,10 @@
             .foto { border: 1px solid #d0d5dd; border-radius: 8px; padding: 6px; page-break-inside: avoid; }
             .foto img { width: 100%; max-height: 230px; object-fit: contain; }
             .assinatura-img { max-width: 220px; max-height: 90px; border: 1px solid #d0d5dd; margin-top: 6px; object-fit: contain; background: #fff; }
-            .selfie-img { width: 86px; height: 86px; border: 1px solid #d0d5dd; border-radius: 10px; object-fit: cover; background: #fff; margin-top: 6px; display: block; }
-            .assinatura-cell { min-width: 170px; }
+            .selfie-img { width: 86px; height: 86px; border: 1px solid #d0d5dd; border-radius: 10px; object-fit: cover; background: #fff; display: block; flex: 0 0 auto; }
+            .selfie-pdf-row { display: flex; gap: 10px; align-items: flex-start; margin-top: 6px; }
+            .selfie-pdf-info { min-width: 150px; max-width: 230px; }
+            .assinatura-cell { min-width: 230px; }
             .selfie-label { font-size: 10px; font-weight: 700; color: #344054; margin-top: 8px; display: block; }
             .small { font-size: 10px; color: #475467; line-height: 1.35; }
             .foto-localizacao { margin-top: 6px; padding-top: 5px; border-top: 1px dashed #d0d5dd; }
@@ -6836,7 +6850,7 @@
                   <td>${t.assinado ? `<span class="badge ok">Assinado</span><br>${formatarData(t.assinado_em)}${formatarLocalizacaoAssinatura(t)}` : `<span class="badge pend">Pendente</span>`}</td>
                   <td class="assinatura-cell">
                     ${t.assinatura_url ? `<span class="selfie-label">Assinatura</span><img class="assinatura-img" src="${t.assinatura_url}">` : "-"}
-                    ${t.selfie_url ? `<span class="selfie-label">Selfie</span><img class="selfie-img" src="${t.selfie_url}">${formatarLocalizacaoSelfie(t)}` : `<span class="selfie-label">Selfie: não registrada</span>`}
+                    ${t.selfie_url ? `<span class="selfie-label">Selfie</span><div class="selfie-pdf-row"><img class="selfie-img" src="${t.selfie_url}"><div class="selfie-pdf-info">${formatarLocalizacaoSelfie(t)}</div></div>` : `<span class="selfie-label">Selfie: não registrada</span>`}
                   </td>
                 </tr>
               `).join("")}
