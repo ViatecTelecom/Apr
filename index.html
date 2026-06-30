@@ -1968,14 +1968,18 @@
                 <p class="small">Ao cadastrar um novo técnico, o sistema cria o login automaticamente no Supabase. Para técnicos já existentes, o e-mail pode ser ajustado/vinculado.</p>
               </div>
 
-              <div id="camposSenhaTecnico" class="grid grid-2">
-                <div class="field">
-                  <label>Senha inicial</label>
-                  <input id="tecSenhaInicial" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
-                </div>
-                <div class="field">
-                  <label>Confirmar senha</label>
-                  <input id="tecSenhaConfirmar" type="password" placeholder="Repita a senha" autocomplete="new-password">
+              <div id="camposSenhaTecnico" class="form-section" style="background:#f8fbff;border-color:#b2ddff;margin-top:10px;">
+                <h4 style="margin:0 0 8px;color:var(--azul-escuro);">Login do técnico</h4>
+                <p class="small" style="margin:0 0 12px;">Para novo técnico, informe uma senha inicial. O sistema cria o login automaticamente.</p>
+                <div class="grid grid-2">
+                  <div class="field">
+                    <label>Senha inicial</label>
+                    <input id="tecSenhaInicial" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+                  </div>
+                  <div class="field">
+                    <label>Confirmar senha</label>
+                    <input id="tecSenhaConfirmar" type="password" placeholder="Repita a senha" autocomplete="new-password">
+                  </div>
                 </div>
               </div>
 
@@ -3495,12 +3499,22 @@
       const id = document.getElementById("tecIdEditando")?.value || "";
       const box = document.getElementById("camposSenhaTecnico");
       if (!box) return;
-      box.classList.toggle("hidden", !!id);
+
+      // No novo cadastro, a senha precisa ficar bem visível.
+      // Na edição de técnico existente, escondemos a senha para não confundir.
+      if (id) {
+        box.classList.add("hidden");
+      } else {
+        box.classList.remove("hidden");
+      }
     }
 
     function abrirFormTecnicoNovo() {
       limparFormTecnico(true);
+      atualizarCamposSenhaTecnico();
       const card = document.getElementById("cardFormTecnico");
+      const senhaBox = document.getElementById("camposSenhaTecnico");
+      if (senhaBox) senhaBox.classList.remove("hidden");
       if (card) {
         card.classList.remove("hidden");
         atualizarBotaoCadastroTecnico();
