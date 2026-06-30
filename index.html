@@ -4361,6 +4361,15 @@
       const files = Array.from(event.target.files || []);
       if (!files.length) return;
 
+      let localizacaoFoto;
+      try {
+        localizacaoFoto = await obterLocalizacaoAssinatura();
+      } catch (geoError) {
+        alert((geoError.message || "Não foi possível capturar a localização.") + "\n\nAutorize a localização para anexar fotos de comprovação.");
+        event.target.value = "";
+        return;
+      }
+
       for (const file of files) {
         if (!file.type.startsWith("image/")) continue;
 
@@ -4378,7 +4387,11 @@
             tamanho_comprimido_bytes: comprimida.blob.size,
             largura: comprimida.largura,
             altura: comprimida.altura,
-            mime_type: comprimida.blob.type || "image/webp"
+            mime_type: comprimida.blob.type || "image/webp",
+            latitude: localizacaoFoto.latitude,
+            longitude: localizacaoFoto.longitude,
+            precisao_metros: localizacaoFoto.precisao,
+            localizacao_capturada_em: localizacaoFoto.capturadaEm
           });
         } catch (err) {
           console.error(err);
@@ -4461,6 +4474,7 @@
             <strong>Foto salva</strong>
             <span class="small">${escapeHtml(f.arquivo_nome || "Arquivo")}</span>
             <span class="small">${formatBytes(f.tamanho_bytes)}</span>
+            ${formatarLocalizacaoFoto(f)}
             <button class="btn btn-danger btn-mini" type="button" onclick="removerFotoExistente('${f.id}', '${escapeHtml(f.storage_path)}')">Remover</button>
           </div>
         </div>
@@ -4473,6 +4487,7 @@
             <strong>Nova foto</strong>
             <span class="small">${escapeHtml(f.nome_original)}</span>
             <span class="small">${formatBytes(f.tamanho_original_bytes)} → ${formatBytes(f.tamanho_comprimido_bytes)}</span>
+            ${formatarLocalizacaoFoto(f)}
             <button class="btn btn-danger btn-mini" type="button" onclick="removerFotoPendente('${f.id_local}')">Remover</button>
           </div>
         </div>
@@ -4592,7 +4607,11 @@
             largura: foto.largura,
             altura: foto.altura,
             tamanho_original_bytes: foto.tamanho_original_bytes,
-            tamanho_comprimido_bytes: foto.tamanho_comprimido_bytes
+            tamanho_comprimido_bytes: foto.tamanho_comprimido_bytes,
+            latitude: foto.latitude ?? null,
+            longitude: foto.longitude ?? null,
+            precisao_metros: foto.precisao_metros ?? null,
+            localizacao_capturada_em: foto.localizacao_capturada_em || null
           });
 
         if (dbError) {
@@ -5005,7 +5024,11 @@
             tamanho_original_bytes: f.tamanho_original_bytes,
             tamanho_comprimido_bytes: f.tamanho_comprimido_bytes,
             largura: f.largura,
-            altura: f.altura
+            altura: f.altura,
+            latitude: f.latitude ?? null,
+            longitude: f.longitude ?? null,
+            precisao_metros: f.precisao_metros ?? null,
+            localizacao_capturada_em: f.localizacao_capturada_em || null
           }))
       };
     }
@@ -5136,6 +5159,10 @@
             assinatura_selfie_storage_path: t.assinatura_selfie_storage_path_sync || null,
             assinatura_selfie_mime_type: assinatura?.selfie_mime_type || null,
             assinatura_selfie_hash: assinatura?.selfie_hash || null,
+            selfie_latitude: assinatura?.selfie_latitude ?? null,
+            selfie_longitude: assinatura?.selfie_longitude ?? null,
+            selfie_precisao_metros: assinatura?.selfie_precisao_metros ?? null,
+            selfie_localizacao_capturada_em: assinatura?.selfie_localizacao_capturada_em || null,
             assinado_em: assinatura?.assinado_em || null,
             assinatura_latitude: assinatura?.assinatura_latitude ?? null,
             assinatura_longitude: assinatura?.assinatura_longitude ?? null,
@@ -5212,7 +5239,11 @@
             largura: foto.largura || null,
             altura: foto.altura || null,
             tamanho_original_bytes: foto.tamanho_original_bytes || null,
-            tamanho_comprimido_bytes: foto.tamanho_comprimido_bytes || foto.blob.size || null
+            tamanho_comprimido_bytes: foto.tamanho_comprimido_bytes || foto.blob.size || null,
+            latitude: foto.latitude ?? null,
+            longitude: foto.longitude ?? null,
+            precisao_metros: foto.precisao_metros ?? null,
+            localizacao_capturada_em: foto.localizacao_capturada_em || null
           });
           if (dbError) throw dbError;
         }
@@ -5785,6 +5816,7 @@
                     <br><span class="small"><strong>Selfie da assinatura:</strong></span><br>
                     <img class="assinatura-img foto-clickable" src="${t.selfie_url}" alt="Selfie de ${escapeHtml(t.nome_tecnico)}" onclick="abrirVisualizadorAssinaturaApr('${apr.id}', ${idx}, 'selfie')">
                     <br><button class="btn btn-light btn-mini" type="button" onclick="abrirVisualizadorAssinaturaApr('${apr.id}', ${idx}, 'selfie')">Ver selfie</button>
+                    ${formatarLocalizacaoSelfie(t)}
                   ` : (t.assinado ? `<br><span class="small"><strong>Selfie:</strong> não registrada</span>` : "")}
                 </div>
                 <div class="row-actions">
@@ -5905,6 +5937,7 @@
                   <strong>${escapeHtml(titulo)}</strong>
                   ${modoCompacto ? "" : `<span class="small">${formatBytes(f.tamanho_bytes)}</span>`}
                   ${modoCompacto ? "" : `<span class="small">Enviada em: ${formatarData(f.enviada_em)}</span>`}
+                  ${modoCompacto ? "" : formatarLocalizacaoFoto(f)}
                   <button type="button" class="btn btn-light btn-mini foto-abrir-link" onclick='abrirVisualizadorFoto(${urlJs}, ${tituloJs})'>Ver foto</button>
                 </div>
               </div>
@@ -6339,7 +6372,7 @@
                   <td>${t.assinado ? `<span class="badge ok">Assinado</span><br>${formatarData(t.assinado_em)}${formatarLocalizacaoAssinatura(t)}` : `<span class="badge pend">Pendente</span>`}</td>
                   <td class="assinatura-cell">
                     ${t.assinatura_url ? `<span class="selfie-label">Assinatura</span><img class="assinatura-img" src="${t.assinatura_url}">` : "-"}
-                    ${t.selfie_url ? `<span class="selfie-label">Selfie</span><img class="selfie-img" src="${t.selfie_url}">` : `<span class="selfie-label">Selfie: não registrada</span>`}
+                    ${t.selfie_url ? `<span class="selfie-label">Selfie</span><img class="selfie-img" src="${t.selfie_url}">${formatarLocalizacaoSelfie(t)}` : `<span class="selfie-label">Selfie: não registrada</span>`}
                   </td>
                 </tr>
               `).join("")}
@@ -6783,6 +6816,12 @@
           <div class="foto-card-body">
             <strong>Selfie capturada</strong>
             <span class="small">${formatBytes(assinaturaSelfieAtual.tamanho_comprimido_bytes || 0)}</span>
+            ${formatarLocalizacaoFoto({
+              latitude: assinaturaSelfieAtual.selfie_latitude,
+              longitude: assinaturaSelfieAtual.selfie_longitude,
+              precisao_metros: assinaturaSelfieAtual.selfie_precisao_metros,
+              localizacao_capturada_em: assinaturaSelfieAtual.selfie_localizacao_capturada_em
+            }).replace("Localização da foto", "Localização da selfie")}
           </div>
         </div>
       `;
@@ -6808,6 +6847,7 @@
       }
 
       try {
+        const localizacaoSelfie = await obterLocalizacaoAssinatura();
         const comprimida = await comprimirImagem(file, 1000, 0.78);
         const hash = await gerarHashBlob(comprimida.blob);
 
@@ -6822,7 +6862,11 @@
           largura: comprimida.largura,
           altura: comprimida.altura,
           tamanho_original_bytes: file.size,
-          tamanho_comprimido_bytes: comprimida.blob.size
+          tamanho_comprimido_bytes: comprimida.blob.size,
+          selfie_latitude: localizacaoSelfie.latitude,
+          selfie_longitude: localizacaoSelfie.longitude,
+          selfie_precisao_metros: localizacaoSelfie.precisao,
+          selfie_localizacao_capturada_em: localizacaoSelfie.capturadaEm
         };
 
         renderSelfieAssinaturaPreview();
@@ -6910,16 +6954,44 @@
       });
     }
 
-    function formatarLocalizacaoAssinatura(t) {
-      const lat = t?.assinatura_latitude;
-      const lng = t?.assinatura_longitude;
+    function formatarLocalizacaoGenerica(lat, lng, precisaoMetros, capturadaEm, rotulo = "Localização") {
       if (lat === null || lat === undefined || lng === null || lng === undefined) return "";
 
-      const precisao = t?.assinatura_precisao_metros ? ` • precisão aprox. ${Math.round(Number(t.assinatura_precisao_metros))}m` : "";
-      const quando = t?.assinatura_localizacao_capturada_em ? ` • ${formatarData(t.assinatura_localizacao_capturada_em)}` : "";
+      const precisao = precisaoMetros ? ` • precisão aprox. ${Math.round(Number(precisaoMetros))}m` : "";
+      const quando = capturadaEm ? ` • ${formatarData(capturadaEm)}` : "";
       const url = `https://www.google.com/maps?q=${encodeURIComponent(lat + "," + lng)}`;
 
-      return `<br><span class="small"><strong>Localização:</strong> ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}${precisao}${quando} • <a href="${url}" target="_blank" rel="noopener">Abrir mapa</a></span>`;
+      return `<br><span class="small"><strong>${escapeHtml(rotulo)}:</strong> ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}${precisao}${quando} • <a href="${url}" target="_blank" rel="noopener">Abrir mapa</a></span>`;
+    }
+
+    function formatarLocalizacaoAssinatura(t) {
+      return formatarLocalizacaoGenerica(
+        t?.assinatura_latitude,
+        t?.assinatura_longitude,
+        t?.assinatura_precisao_metros,
+        t?.assinatura_localizacao_capturada_em,
+        "Localização da assinatura"
+      );
+    }
+
+    function formatarLocalizacaoSelfie(t) {
+      return formatarLocalizacaoGenerica(
+        t?.selfie_latitude,
+        t?.selfie_longitude,
+        t?.selfie_precisao_metros,
+        t?.selfie_localizacao_capturada_em,
+        "Localização da selfie"
+      );
+    }
+
+    function formatarLocalizacaoFoto(f) {
+      return formatarLocalizacaoGenerica(
+        f?.latitude,
+        f?.longitude,
+        f?.precisao_metros,
+        f?.localizacao_capturada_em,
+        "Localização da foto"
+      );
     }
 
     function obterLocalizacaoAssinatura() {
@@ -6984,6 +7056,10 @@
         selfie_blob: assinaturaSelfieAtual?.blob || null,
         selfie_mime_type: assinaturaSelfieAtual?.mime_type || null,
         selfie_hash: assinaturaSelfieAtual?.hash || null,
+        selfie_latitude: assinaturaSelfieAtual?.selfie_latitude ?? null,
+        selfie_longitude: assinaturaSelfieAtual?.selfie_longitude ?? null,
+        selfie_precisao_metros: assinaturaSelfieAtual?.selfie_precisao_metros ?? null,
+        selfie_localizacao_capturada_em: assinaturaSelfieAtual?.selfie_localizacao_capturada_em || null,
         assinado_em: agoraIso,
         assinatura_latitude: localizacao.latitude,
         assinatura_longitude: localizacao.longitude,
@@ -7109,6 +7185,10 @@
         assinatura_selfie_storage_path: pathSelfie,
         assinatura_selfie_mime_type: assinaturaSelfieAtual.mime_type || "image/webp",
         assinatura_selfie_hash: assinaturaSelfieAtual.hash || null,
+        selfie_latitude: assinaturaSelfieAtual.selfie_latitude ?? null,
+        selfie_longitude: assinaturaSelfieAtual.selfie_longitude ?? null,
+        selfie_precisao_metros: assinaturaSelfieAtual.selfie_precisao_metros ?? null,
+        selfie_localizacao_capturada_em: assinaturaSelfieAtual.selfie_localizacao_capturada_em || null,
         assinado_em: agora.toISOString(),
         assinatura_latitude: localizacao.latitude,
         assinatura_longitude: localizacao.longitude,
