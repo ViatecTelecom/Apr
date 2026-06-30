@@ -4470,7 +4470,7 @@
       }
     }
 
-    async function garantirLocalizacaoFotosPendentes(msgId = "novaAprMsg") {
+    async function garantirLocalizacaoFotosPendentes(msgId = "novaAprMsg", bloquearSemLocalizacao = false) {
       const fotosSemLocalizacao = fotosPendentesApr.filter(f =>
         (f.tipo_local || "foto_apr") === "foto_apr" &&
         (f.latitude == null || f.longitude == null)
@@ -4479,6 +4479,7 @@
       if (!fotosSemLocalizacao.length) return true;
 
       try {
+        if (msgId) setMsg(msgId, "ok", "Capturando localização das fotos...");
         const localizacaoFoto = await obterLocalizacaoAssinatura();
         fotosSemLocalizacao.forEach(f => {
           f.latitude = localizacaoFoto.latitude;
@@ -4489,11 +4490,26 @@
         renderFotosApr();
         return true;
       } catch (geoError) {
-        const mensagem = (geoError.message || "Não foi possível capturar a localização.") +
-          " Autorize a localização para enviar as fotos de comprovação.";
-        if (msgId) setMsg(msgId, "err", mensagem);
-        else alert(mensagem);
-        return false;
+        const mensagem = (geoError.message || "Não foi possível capturar a localização.");
+
+        // v55: não deixa a foto travada. Envia a foto mesmo se o GPS falhar,
+        // mas deixa o alerta claro na tela. Assim descobrimos se o problema era
+        // localização ou upload/Storage/banco.
+        if (bloquearSemLocalizacao) {
+          const msgBloqueio = mensagem + " Autorize a localização para enviar as fotos de comprovação.";
+          if (msgId) setMsg(msgId, "err", msgBloqueio);
+          else alert(msgBloqueio);
+          return false;
+        }
+
+        fotosSemLocalizacao.forEach(f => {
+          f.erro_localizacao = mensagem;
+        });
+        renderFotosApr();
+        if (msgId) {
+          setMsg(msgId, "ok", "Atenção: não foi possível capturar a localização agora, mas a foto será enviada. Motivo: " + mensagem);
+        }
+        return true;
       }
     }
 
@@ -4687,13 +4703,14 @@
     async function uploadFotosApr(aprId, numeroApr) {
       if (!fotosPendentesApr.length) return true;
 
-      const localizacaoOk = await garantirLocalizacaoFotosPendentes("novaAprMsg");
+      const localizacaoOk = await garantirLocalizacaoFotosPendentes("novaAprMsg", false);
       if (!localizacaoOk) return false;
 
       setMsg("novaAprMsg", "ok", `Enviando ${fotosPendentesApr.length} foto(s) da APR...`);
 
       for (let i = 0; i < fotosPendentesApr.length; i++) {
         const foto = fotosPendentesApr[i];
+        setMsg("novaAprMsg", "ok", `Enviando foto ${i + 1} de ${fotosPendentesApr.length}...`);
 
         const ano = new Date().getFullYear();
         const mes = String(new Date().getMonth() + 1).padStart(2, "0");
@@ -4734,11 +4751,11 @@
             storage_path: path,
             arquivo_nome: nomeSeguro,
             mime_type: mimeFoto,
-            tamanho_bytes: foto.tamanho_comprimido_bytes,
-            largura: foto.largura,
-            altura: foto.altura,
-            tamanho_original_bytes: foto.tamanho_original_bytes,
-            tamanho_comprimido_bytes: foto.tamanho_comprimido_bytes,
+            tamanho_bytes: blobUpload.size || foto.tamanho_comprimido_bytes || foto.tamanho_original_bytes || null,
+            largura: foto.largura || null,
+            altura: foto.altura || null,
+            tamanho_original_bytes: foto.tamanho_original_bytes || null,
+            tamanho_comprimido_bytes: foto.tamanho_comprimido_bytes || blobUpload.size || null,
             latitude: foto.latitude ?? null,
             longitude: foto.longitude ?? null,
             precisao_metros: foto.precisao_metros ?? null,
@@ -4746,7 +4763,7 @@
           });
 
         if (dbError) {
-          setMsg("novaAprMsg", "err", "Foto enviada, mas erro ao salvar no banco: " + dbError.message + " Verifique se o SQL da v49 foi rodado na tabela apr_fotos.");
+          setMsg("novaAprMsg", "err", "Foto enviada ao Storage, mas erro ao salvar o registro no banco: " + dbError.message + " | Rode o SQL de conferência da tabela apr_fotos que enviei e tente novamente.");
           return false;
         }
       }
@@ -5756,6 +5773,10 @@
 
         aprId = aprCriada.id;
         aprNumero = aprCriada.numero_apr;
+
+        // v55: se uma etapa posterior falhar, como upload de foto,
+        // a próxima tentativa atualiza esta mesma APR em vez de criar outra duplicada.
+        aprEditandoId = aprId;
       }
 
       const tecnicosInsert = tecnicosSelecionados.map((t, index) => ({
@@ -7305,13 +7326,18 @@
     }
 
     function formatarLocalizacaoFoto(f) {
-      return formatarLocalizacaoGenerica(
+      const html = formatarLocalizacaoGenerica(
         f?.latitude,
         f?.longitude,
         f?.precisao_metros,
         f?.localizacao_capturada_em,
         "Localização da foto"
       );
+      if (html) return html;
+      if (f?.erro_localizacao) {
+        return `<span class="small danger-text">Localização não capturada: ${escapeHtml(f.erro_localizacao)}</span>`;
+      }
+      return `<span class="small">Localização: será capturada ao salvar.</span>`;
     }
 
     function obterLocalizacaoAssinatura() {
