@@ -7698,8 +7698,22 @@
       }
 
       let { data: updateData, error: updateError } = await updateQuery.select("id, nome_tecnico, tecnico_id");
+      let assinaturaSalvaModoCompatibilidade = false;
+      let camposIgnoradosAssinatura = [];
 
-      if ((!updateData || updateData.length === 0) && (vinculo.nome_tecnico || vinculo.nome)) {
+      async function atualizarVinculoAssinatura(payloadUpdate) {
+        let q = supabaseClient.from("apr_tecnicos").update(payloadUpdate);
+        if (vinculo.id) {
+          q = q.eq("id", vinculo.id);
+        } else if (vinculo.tecnico_id) {
+          q = q.eq("apr_id", apr.id).eq("tecnico_id", vinculo.tecnico_id);
+        } else {
+          q = q.eq("apr_id", apr.id).eq("nome_tecnico", vinculo.nome_tecnico || vinculo.nome || "");
+        }
+        return await q.select("id, nome_tecnico, tecnico_id");
+      }
+
+      if ((!updateData || updateData.length === 0) && (vinculo.nome_tecnico || vinculo.nome) && !updateError) {
         const nomeBusca = vinculo.nome_tecnico || vinculo.nome;
         const tentativaNome = await supabaseClient
           .from("apr_tecnicos")
@@ -7710,6 +7724,40 @@
 
         updateData = tentativaNome.data;
         updateError = tentativaNome.error;
+      }
+
+      // Plano B para cache de schema do Supabase/PostgREST:
+      // se ele reclamar de uma coluna nova como selfie_latitude, removemos somente esse campo
+      // e tentamos novamente, mantendo assinatura, selfie e localização principal quando possível.
+      if (updateError && /Could not find the .* column|schema cache/i.test(updateError.message || "")) {
+        let payloadCompat = { ...payloadAssinaturaBanco };
+        for (let tentativa = 0; tentativa < 8 && updateError; tentativa++) {
+          const msgErro = updateError.message || "";
+          const matchColuna = msgErro.match(/Could not find the '([^']+)' column/i);
+          const coluna = matchColuna?.[1];
+
+          if (coluna && Object.prototype.hasOwnProperty.call(payloadCompat, coluna)) {
+            delete payloadCompat[coluna];
+            camposIgnoradosAssinatura.push(coluna);
+          } else {
+            [
+              "selfie_latitude",
+              "selfie_longitude",
+              "selfie_precisao_metros",
+              "selfie_localizacao_capturada_em"
+            ].forEach(c => {
+              if (Object.prototype.hasOwnProperty.call(payloadCompat, c)) {
+                delete payloadCompat[c];
+                if (!camposIgnoradosAssinatura.includes(c)) camposIgnoradosAssinatura.push(c);
+              }
+            });
+          }
+
+          const tentativaCompat = await atualizarVinculoAssinatura(payloadCompat);
+          updateData = tentativaCompat.data;
+          updateError = tentativaCompat.error;
+          assinaturaSalvaModoCompatibilidade = !updateError;
+        }
       }
 
       if (updateError) {
@@ -7738,13 +7786,25 @@
             longitude: localizacao.longitude,
             precisao_metros: localizacao.precisao,
             capturada_em: localizacao.capturadaEm
-          }
+          },
+          selfie_localizacao: {
+            latitude: assinaturaSelfieAtual.selfie_latitude ?? null,
+            longitude: assinaturaSelfieAtual.selfie_longitude ?? null,
+            precisao_metros: assinaturaSelfieAtual.selfie_precisao_metros ?? null,
+            capturada_em: assinaturaSelfieAtual.selfie_localizacao_capturada_em || null
+          },
+          modo_compatibilidade_schema: assinaturaSalvaModoCompatibilidade,
+          campos_ignorados_por_cache: camposIgnoradosAssinatura
         }
       });
 
       await atualizarStatusAprDepoisDasAssinaturas(apr.id);
 
-      setMsg("assinaturaMsg", "ok", "Assinatura, selfie e localização registradas com sucesso.");
+      if (assinaturaSalvaModoCompatibilidade) {
+        setMsg("assinaturaMsg", "ok", "Assinatura e selfie registradas. Atenção: o Supabase ainda recusou alguns campos novos por cache/schema (" + camposIgnoradosAssinatura.join(", ") + "), mas a assinatura não ficou travada.");
+      } else {
+        setMsg("assinaturaMsg", "ok", "Assinatura, selfie e localização registradas com sucesso.");
+      }
 
       setTimeout(async () => {
         fecharModalAssinatura();
