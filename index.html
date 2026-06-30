@@ -4359,6 +4359,21 @@
       return (bytes / (1024 * 1024)).toFixed(2) + " MB";
     }
 
+    function extensaoArquivoImagemPorMime(mime) {
+      const tipo = String(mime || "").toLowerCase();
+      if (tipo.includes("png")) return "png";
+      if (tipo.includes("webp")) return "webp";
+      if (tipo.includes("jpeg") || tipo.includes("jpg")) return "jpg";
+      return "jpg";
+    }
+
+    function uuidSeguroLocal() {
+      try {
+        if (crypto?.randomUUID) return crypto.randomUUID();
+      } catch (err) {}
+      return String(Date.now()) + "-" + Math.random().toString(16).slice(2);
+    }
+
     async function selecionarFotosApr(event) {
       const files = Array.from(event.target.files || []);
       if (!files.length) return;
@@ -4392,7 +4407,7 @@
             tamanho_comprimido_bytes: comprimida.blob.size,
             largura: comprimida.largura,
             altura: comprimida.altura,
-            mime_type: comprimida.blob.type || "image/webp",
+            mime_type: comprimida.mime_type || comprimida.blob.type || "image/jpeg",
             latitude: localizacaoFoto?.latitude ?? null,
             longitude: localizacaoFoto?.longitude ?? null,
             precisao_metros: localizacaoFoto?.precisao ?? null,
@@ -4440,15 +4455,30 @@
       }
     }
 
-    function comprimirImagem(file, maxWidth = 1600, quality = 0.78) {
+    function canvasToBlobCompat(canvas, mime, quality) {
+      return new Promise(resolve => {
+        try {
+          canvas.toBlob(blob => resolve(blob), mime, quality);
+        } catch (err) {
+          console.warn("Falha no canvas.toBlob:", err);
+          resolve(null);
+        }
+      });
+    }
+
+    function comprimirImagem(file, maxWidth = 1600, quality = 0.82) {
       return new Promise((resolve, reject) => {
         const img = new Image();
-        const reader = new FileReader();
+        const objectUrl = URL.createObjectURL(file);
 
-        reader.onload = e => {
-          img.onload = () => {
-            let width = img.width;
-            let height = img.height;
+        img.onload = async () => {
+          try {
+            let width = img.naturalWidth || img.width;
+            let height = img.naturalHeight || img.height;
+
+            if (!width || !height) {
+              throw new Error("Não foi possível ler as dimensões da imagem.");
+            }
 
             if (width > maxWidth) {
               height = Math.round((height * maxWidth) / width);
@@ -4462,30 +4492,37 @@
             const ctx = canvas.getContext("2d");
             ctx.drawImage(img, 0, 0, width, height);
 
-            canvas.toBlob(
-              blob => {
-                if (!blob) {
-                  reject(new Error("Não foi possível comprimir a imagem."));
-                  return;
-                }
+            // JPEG é mais estável no Android/iOS para upload via Supabase Storage.
+            // WebP pode falhar ou gerar Blob vazio em alguns navegadores/câmeras.
+            let blob = await canvasToBlobCompat(canvas, "image/jpeg", quality);
 
-                resolve({
-                  blob,
-                  largura: width,
-                  altura: height
-                });
-              },
-              "image/webp",
-              quality
-            );
-          };
+            if (!blob) {
+              blob = await canvasToBlobCompat(canvas, "image/png");
+            }
 
-          img.onerror = reject;
-          img.src = e.target.result;
+            if (!blob) {
+              throw new Error("Não foi possível preparar a imagem para envio.");
+            }
+
+            resolve({
+              blob,
+              largura: width,
+              altura: height,
+              mime_type: blob.type || "image/jpeg"
+            });
+          } catch (err) {
+            reject(err);
+          } finally {
+            URL.revokeObjectURL(objectUrl);
+          }
         };
 
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+        img.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          reject(new Error("Não foi possível abrir esta imagem. Tente tirar a foto novamente."));
+        };
+
+        img.src = objectUrl;
       });
     }
 
@@ -4618,7 +4655,9 @@
 
         const ano = new Date().getFullYear();
         const mes = String(new Date().getMonth() + 1).padStart(2, "0");
-        const nomeSeguro = `${Date.now()}-${i + 1}.webp`;
+        const mimeFoto = foto.mime_type || foto.blob?.type || "image/jpeg";
+        const extFoto = extensaoArquivoImagemPorMime(mimeFoto);
+        const nomeSeguro = `${Date.now()}-${i + 1}-${uuidSeguroLocal()}.${extFoto}`;
 
         const path = `fotos/${ano}/${mes}/${numeroApr || aprId}/${nomeSeguro}`;
 
@@ -4626,7 +4665,8 @@
           .storage
           .from("apr-arquivos")
           .upload(path, foto.blob, {
-            contentType: "image/webp",
+            contentType: mimeFoto,
+            cacheControl: "3600",
             upsert: false
           });
 
@@ -4644,7 +4684,7 @@
             descricao: "Foto de comprovação da APR",
             storage_path: path,
             arquivo_nome: nomeSeguro,
-            mime_type: "image/webp",
+            mime_type: mimeFoto,
             tamanho_bytes: foto.tamanho_comprimido_bytes,
             largura: foto.largura,
             altura: foto.altura,
@@ -5024,7 +5064,7 @@
             tipo_local: "foto_apr",
             blob: comprimida.blob,
             nome_original: file.name,
-            mime_type: comprimida.blob.type || "image/webp",
+            mime_type: comprimida.mime_type || comprimida.blob.type || "image/jpeg",
             tamanho_original_bytes: file.size,
             tamanho_comprimido_bytes: comprimida.blob.size,
             largura: comprimida.largura,
@@ -5416,11 +5456,14 @@
           if (foto.storage_path_sync) continue;
           const ano = new Date().getFullYear();
           const mes = String(new Date().getMonth() + 1).padStart(2, "0");
-          const nomeSeguro = `${Date.now()}-${i + 1}.webp`;
+          const mimeFoto = foto.mime_type || foto.blob?.type || "image/jpeg";
+          const extFoto = extensaoArquivoImagemPorMime(mimeFoto);
+          const nomeSeguro = `${Date.now()}-${i + 1}-${uuidSeguroLocal()}.${extFoto}`;
           const path = `fotos/${ano}/${mes}/${aprNumero || aprId}/${nomeSeguro}`;
 
           const { error: uploadError } = await supabaseClient.storage.from("apr-arquivos").upload(path, foto.blob, {
-            contentType: foto.mime_type || "image/webp",
+            contentType: mimeFoto,
+            cacheControl: "3600",
             upsert: false
           });
           if (uploadError) throw uploadError;
@@ -5432,7 +5475,7 @@
             descricao: "Foto de comprovação da APR enviada após criação offline",
             storage_path: path,
             arquivo_nome: nomeSeguro,
-            mime_type: foto.mime_type || "image/webp",
+            mime_type: mimeFoto,
             tamanho_bytes: foto.tamanho_comprimido_bytes || foto.blob.size || null,
             largura: foto.largura || null,
             altura: foto.altura || null,
@@ -5695,6 +5738,13 @@
       const uploadOk = await uploadFotosApr(aprId, aprNumero);
 
       if (!uploadOk) {
+        // A APR já foi criada/atualizada, mas as fotos não subiram.
+        // Mantém o formulário em modo edição para o usuário conseguir tentar salvar de novo
+        // sem criar uma APR duplicada.
+        aprEditandoId = aprId;
+        document.getElementById("tituloNovaApr").textContent = "Editar APR";
+        document.getElementById("btnSalvarApr").textContent = "Salvar novamente";
+        document.getElementById("btnCancelarEdicaoApr").classList.remove("hidden");
         return;
       }
 
