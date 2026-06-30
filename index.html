@@ -4363,8 +4363,51 @@
       const tipo = String(mime || "").toLowerCase();
       if (tipo.includes("png")) return "png";
       if (tipo.includes("webp")) return "webp";
+      if (tipo.includes("heic")) return "heic";
+      if (tipo.includes("heif")) return "heif";
       if (tipo.includes("jpeg") || tipo.includes("jpg")) return "jpg";
       return "jpg";
+    }
+
+    function arquivoPareceImagem(file) {
+      if (!file) return false;
+      if (String(file.type || "").startsWith("image/")) return true;
+      return /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(file.name || "");
+    }
+
+    function inferirMimeImagem(file) {
+      const tipo = String(file?.type || "").trim();
+      if (tipo) return tipo;
+      const nome = String(file?.name || "").toLowerCase();
+      if (nome.endsWith(".png")) return "image/png";
+      if (nome.endsWith(".webp")) return "image/webp";
+      if (nome.endsWith(".heic")) return "image/heic";
+      if (nome.endsWith(".heif")) return "image/heif";
+      return "image/jpeg";
+    }
+
+    async function prepararImagemApr(file) {
+      try {
+        const comprimida = await comprimirImagem(file, 1600, 0.78);
+        return {
+          blob: comprimida.blob,
+          largura: comprimida.largura,
+          altura: comprimida.altura,
+          mime_type: comprimida.mime_type || comprimida.blob.type || "image/jpeg",
+          comprimida: true
+        };
+      } catch (err) {
+        console.warn("Não foi possível comprimir a imagem. Usando arquivo original:", err);
+        // Fallback importante para alguns celulares que entregam foto com MIME vazio,
+        // HEIC/HEIF ou formatos que o canvas não consegue abrir.
+        return {
+          blob: file,
+          largura: null,
+          altura: null,
+          mime_type: inferirMimeImagem(file),
+          comprimida: false
+        };
+      }
     }
 
     function uuidSeguroLocal() {
@@ -4378,45 +4421,42 @@
       const files = Array.from(event.target.files || []);
       if (!files.length) return;
 
-      // Primeiro adiciona as fotos na tela. A localização é capturada aqui quando possível
-      // e, se o celular demorar/negar, o sistema tenta novamente ao salvar a APR.
-      let localizacaoFoto = null;
-      try {
-        localizacaoFoto = await obterLocalizacaoAssinatura();
-      } catch (geoError) {
-        console.warn("Localização da foto ainda não capturada. Será solicitada novamente ao salvar.", geoError);
-        alert("A foto será adicionada, mas ainda falta capturar a localização.\n\nAo salvar a APR, autorize a localização para que as fotos sejam enviadas com coordenadas.");
-      }
-
+      // v54: a foto entra imediatamente na tela. A localização será capturada ao salvar,
+      // evitando travar o anexo quando o celular demora para responder GPS/permissão.
       let adicionadas = 0;
+      let ignoradas = 0;
 
       for (const file of files) {
-        if (!file.type.startsWith("image/")) continue;
+        if (!arquivoPareceImagem(file)) {
+          ignoradas++;
+          continue;
+        }
 
         try {
-          const comprimida = await comprimirImagem(file, 1600, 0.78);
+          const preparada = await prepararImagemApr(file);
+          const blobFinal = preparada.blob || file;
 
           fotosPendentesApr.push({
-            id_local: crypto.randomUUID(),
+            id_local: uuidSeguroLocal(),
             tipo_local: "foto_apr",
             file_original: file,
-            blob: comprimida.blob,
-            preview_url: URL.createObjectURL(comprimida.blob),
-            nome_original: file.name,
-            tamanho_original_bytes: file.size,
-            tamanho_comprimido_bytes: comprimida.blob.size,
-            largura: comprimida.largura,
-            altura: comprimida.altura,
-            mime_type: comprimida.mime_type || comprimida.blob.type || "image/jpeg",
-            latitude: localizacaoFoto?.latitude ?? null,
-            longitude: localizacaoFoto?.longitude ?? null,
-            precisao_metros: localizacaoFoto?.precisao ?? null,
-            localizacao_capturada_em: localizacaoFoto?.capturadaEm || null
+            blob: blobFinal,
+            preview_url: URL.createObjectURL(blobFinal),
+            nome_original: file.name || `foto-${Date.now()}.jpg`,
+            tamanho_original_bytes: file.size || blobFinal.size || 0,
+            tamanho_comprimido_bytes: blobFinal.size || file.size || 0,
+            largura: preparada.largura,
+            altura: preparada.altura,
+            mime_type: preparada.mime_type || blobFinal.type || inferirMimeImagem(file),
+            latitude: null,
+            longitude: null,
+            precisao_metros: null,
+            localizacao_capturada_em: null
           });
           adicionadas++;
         } catch (err) {
-          console.error(err);
-          alert("Erro ao processar a imagem: " + file.name);
+          console.error("Erro ao preparar foto:", err);
+          alert("Erro ao processar a imagem: " + (file.name || "foto") + "\n" + (err.message || String(err)));
         }
       }
 
@@ -4424,7 +4464,9 @@
       renderFotosApr();
 
       if (adicionadas > 0) {
-        setMsg("novaAprMsg", "ok", `${adicionadas} foto(s) adicionada(s). Ao salvar, o sistema enviará as fotos com localização.`);
+        setMsg("novaAprMsg", "ok", `${adicionadas} foto(s) adicionada(s). Ao salvar, permita a localização para enviar as fotos.`);
+      } else if (ignoradas > 0) {
+        setMsg("novaAprMsg", "err", "Nenhuma foto válida foi selecionada. Tente tirar a foto novamente pela câmera.");
       }
     }
 
@@ -4661,17 +4703,24 @@
 
         const path = `fotos/${ano}/${mes}/${numeroApr || aprId}/${nomeSeguro}`;
 
+        const blobUpload = foto.blob || foto.file_original;
+        if (!blobUpload || !blobUpload.size) {
+          setMsg("novaAprMsg", "err", "Uma das fotos está sem arquivo válido para envio. Remova essa foto e adicione novamente.");
+          return false;
+        }
+
         const { error: uploadError } = await supabaseClient
           .storage
           .from("apr-arquivos")
-          .upload(path, foto.blob, {
+          .upload(path, blobUpload, {
             contentType: mimeFoto,
             cacheControl: "3600",
-            upsert: false
+            upsert: true
           });
 
         if (uploadError) {
-          setMsg("novaAprMsg", "err", "Erro ao enviar foto para o Storage: " + uploadError.message + " Verifique as policies do bucket apr-arquivos e a conexão.");
+          console.error("Erro upload foto APR", { path, mimeFoto, size: blobUpload.size, uploadError });
+          setMsg("novaAprMsg", "err", "Erro ao enviar foto para o Storage: " + (uploadError.message || JSON.stringify(uploadError)) + " | Arquivo: " + (foto.nome_original || nomeSeguro) + " | Tipo: " + mimeFoto + " | Tamanho: " + formatBytes(blobUpload.size) + ". Verifique as policies do bucket apr-arquivos.");
           return false;
         }
 
@@ -5185,7 +5234,7 @@
             tipo_local: "foto_apr",
             blob: f.blob,
             nome_original: f.nome_original,
-            mime_type: f.mime_type || "image/webp",
+            mime_type: f.mime_type || "image/jpeg",
             tamanho_original_bytes: f.tamanho_original_bytes,
             tamanho_comprimido_bytes: f.tamanho_comprimido_bytes,
             largura: f.largura,
@@ -5437,6 +5486,20 @@
           if (!foto?.blob) continue;
           if ((foto.tipo_local || "foto_apr") !== "foto_apr") continue;
 
+          // v54: se a foto offline foi anexada sem localização, captura agora na sincronização.
+          if (foto.latitude == null || foto.longitude == null) {
+            try {
+              const locFotoOffline = await obterLocalizacaoAssinatura();
+              foto.latitude = locFotoOffline.latitude;
+              foto.longitude = locFotoOffline.longitude;
+              foto.precisao_metros = locFotoOffline.precisao;
+              foto.localizacao_capturada_em = locFotoOffline.capturadaEm;
+              await dbOfflinePut(item);
+            } catch (geoError) {
+              throw new Error((geoError.message || "Não foi possível capturar a localização") + " Autorize a localização para sincronizar as fotos de comprovação.");
+            }
+          }
+
           // Se por algum bug antigo uma assinatura caiu na lista de fotos, ignora.
           try {
             const hashFoto = await gerarHashBlob(foto.blob);
@@ -5461,12 +5524,15 @@
           const nomeSeguro = `${Date.now()}-${i + 1}-${uuidSeguroLocal()}.${extFoto}`;
           const path = `fotos/${ano}/${mes}/${aprNumero || aprId}/${nomeSeguro}`;
 
-          const { error: uploadError } = await supabaseClient.storage.from("apr-arquivos").upload(path, foto.blob, {
+          const blobUpload = foto.blob;
+          if (!blobUpload || !blobUpload.size) throw new Error("Uma foto offline está sem arquivo válido. Remova essa foto e adicione novamente.");
+
+          const { error: uploadError } = await supabaseClient.storage.from("apr-arquivos").upload(path, blobUpload, {
             contentType: mimeFoto,
             cacheControl: "3600",
-            upsert: false
+            upsert: true
           });
-          if (uploadError) throw uploadError;
+          if (uploadError) throw new Error("Erro ao enviar foto offline para o Storage: " + (uploadError.message || JSON.stringify(uploadError)) + " | Tipo: " + mimeFoto + " | Tamanho: " + formatBytes(blobUpload.size));
 
           const { data: fotoInserida, error: dbError } = await supabaseClient.from("apr_fotos").insert({
             apr_id: aprId,
@@ -7249,34 +7315,55 @@
     }
 
     function obterLocalizacaoAssinatura() {
-      return new Promise((resolve, reject) => {
+      function tentarLocalizacao(opcoes) {
+        return new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            pos => {
+              resolve({
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+                precisao: pos.coords.accuracy || null,
+                capturadaEm: new Date().toISOString()
+              });
+            },
+            reject,
+            opcoes
+          );
+        });
+      }
+
+      return new Promise(async (resolve, reject) => {
         if (!navigator.geolocation) {
           reject(new Error("Este navegador não permite capturar localização."));
           return;
         }
 
-        navigator.geolocation.getCurrentPosition(
-          pos => {
-            resolve({
-              latitude: pos.coords.latitude,
-              longitude: pos.coords.longitude,
-              precisao: pos.coords.accuracy || null,
-              capturadaEm: new Date().toISOString()
-            });
-          },
-          err => {
-            let msg = "Não foi possível capturar a localização.";
-            if (err.code === 1) msg = "Permissão de localização negada. Autorize a localização para assinar a APR.";
-            if (err.code === 2) msg = "Localização indisponível no momento. Ative o GPS/dados móveis e tente novamente.";
-            if (err.code === 3) msg = "Tempo esgotado ao capturar localização. Tente novamente.";
-            reject(new Error(msg));
-          },
-          {
+        try {
+          const posAlta = await tentarLocalizacao({
             enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 0
+            timeout: 20000,
+            maximumAge: 60000
+          });
+          resolve(posAlta);
+          return;
+        } catch (errAlta) {
+          console.warn("Falha na localização de alta precisão. Tentando localização normal:", errAlta);
+          try {
+            const posNormal = await tentarLocalizacao({
+              enableHighAccuracy: false,
+              timeout: 20000,
+              maximumAge: 120000
+            });
+            resolve(posNormal);
+            return;
+          } catch (err) {
+            let msg = "Não foi possível capturar a localização.";
+            if (err.code === 1) msg = "Permissão de localização negada. Autorize a localização para continuar.";
+            if (err.code === 2) msg = "Localização indisponível no momento. Ative o GPS/dados móveis e tente novamente.";
+            if (err.code === 3) msg = "Tempo esgotado ao capturar localização. Ative o GPS, aguarde alguns segundos e tente novamente.";
+            reject(new Error(msg));
           }
-        );
+        }
       });
     }
 
