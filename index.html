@@ -2242,6 +2242,41 @@
     </div>
   </section>
 
+
+  <div id="modalAlterarSenhaTecnico" class="modal-backdrop hidden">
+    <div class="modal" style="max-width:520px;">
+      <div class="modal-header">
+        <h3>Alterar senha do técnico</h3>
+        <button class="btn btn-light btn-mini" type="button" onclick="fecharModalAlterarSenhaTecnico()">Fechar</button>
+      </div>
+
+      <input type="hidden" id="senhaTecnicoUsuarioId">
+      <input type="hidden" id="senhaTecnicoNome">
+
+      <div class="form-section">
+        <h4 id="senhaTecnicoTitulo" style="margin-bottom:6px;">Técnico</h4>
+        <p class="small">Informe uma nova senha para o login deste técnico. A alteração será feita no Supabase Auth pela Edge Function segura.</p>
+
+        <div class="field">
+          <label>Nova senha</label>
+          <input id="senhaTecnicoNova" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+        </div>
+
+        <div class="field">
+          <label>Confirmar nova senha</label>
+          <input id="senhaTecnicoConfirmar" type="password" placeholder="Repita a nova senha" autocomplete="new-password">
+        </div>
+      </div>
+
+      <div class="row-actions">
+        <button class="btn btn-light" type="button" onclick="fecharModalAlterarSenhaTecnico()">Cancelar</button>
+        <button id="btnConfirmarAlterarSenhaTecnico" class="btn btn-primary" type="button" onclick="confirmarAlterarSenhaTecnico()">Salvar nova senha</button>
+      </div>
+
+      <div id="senhaTecnicoMsg" class="msg"></div>
+    </div>
+  </div>
+
   <div id="modalDetalhesApr" class="modal-backdrop hidden">
     <div class="modal">
       <div class="modal-header">
@@ -3424,6 +3459,7 @@
               <div class="row-actions">
                 <button class="btn btn-light btn-mini" onclick="editarTecnico('${t.id}')">Editar</button>
                 <button class="btn btn-primary btn-mini" onclick="abrirAsoDoTecnico('${t.id}')">ASO</button>
+                ${t.usuario_id ? `<button class="btn btn-light btn-mini" onclick="abrirModalAlterarSenhaTecnico('${t.id}')">Alterar senha</button>` : `<button class="btn btn-light btn-mini" disabled title="Técnico sem login vinculado">Alterar senha</button>`}
                 <button class="btn ${t.ativo ? 'btn-warning' : 'btn-green'} btn-mini" onclick="alterarStatusTecnico('${t.id}', ${t.ativo ? 'false' : 'true'})">${t.ativo ? 'Inativar' : 'Ativar'}</button>
               </div>
             </td>
@@ -3446,6 +3482,8 @@
             </div>
             <div class="row-actions" style="margin-top:10px;">
               <button class="btn btn-light btn-mini" onclick="editarTecnico('${t.id}')">Editar</button>
+              <button class="btn btn-primary btn-mini" onclick="abrirAsoDoTecnico('${t.id}')">ASO</button>
+              ${t.usuario_id ? `<button class="btn btn-light btn-mini" onclick="abrirModalAlterarSenhaTecnico('${t.id}')">Alterar senha</button>` : `<button class="btn btn-light btn-mini" disabled title="Técnico sem login vinculado">Alterar senha</button>`}
               <button class="btn ${t.ativo ? 'btn-warning' : 'btn-green'} btn-mini" onclick="alterarStatusTecnico('${t.id}', ${t.ativo ? 'false' : 'true'})">${t.ativo ? 'Inativar' : 'Ativar'}</button>
             </div>
           </div>
@@ -3457,6 +3495,119 @@
 
       if (mobileAtivos) mobileAtivos.innerHTML = renderMobile(ativos, true);
       if (mobileInativos) mobileInativos.innerHTML = renderMobile(inativos, false);
+    }
+
+
+    function abrirModalAlterarSenhaTecnico(id) {
+      if (perfilAtual?.perfil !== "admin") {
+        alert("Somente admin pode alterar senha de técnicos.");
+        return;
+      }
+
+      const tecnico = tecnicosCache.find(t => t.id === id);
+      if (!tecnico) {
+        alert("Técnico não encontrado.");
+        return;
+      }
+
+      if (!tecnico.usuario_id) {
+        alert("Este técnico ainda não possui login vinculado. Edite o técnico e vincule/crie o login primeiro.");
+        return;
+      }
+
+      document.getElementById("senhaTecnicoUsuarioId").value = tecnico.usuario_id;
+      document.getElementById("senhaTecnicoNome").value = tecnico.nome || "";
+      document.getElementById("senhaTecnicoNova").value = "";
+      document.getElementById("senhaTecnicoConfirmar").value = "";
+      document.getElementById("senhaTecnicoTitulo").textContent = tecnico.nome || "Técnico";
+      clearMsg("senhaTecnicoMsg");
+      document.getElementById("modalAlterarSenhaTecnico").classList.remove("hidden");
+      setTimeout(() => document.getElementById("senhaTecnicoNova")?.focus(), 100);
+    }
+
+    function fecharModalAlterarSenhaTecnico() {
+      document.getElementById("modalAlterarSenhaTecnico")?.classList.add("hidden");
+      document.getElementById("senhaTecnicoUsuarioId").value = "";
+      document.getElementById("senhaTecnicoNome").value = "";
+      document.getElementById("senhaTecnicoNova").value = "";
+      document.getElementById("senhaTecnicoConfirmar").value = "";
+      clearMsg("senhaTecnicoMsg");
+    }
+
+    async function confirmarAlterarSenhaTecnico() {
+      clearMsg("senhaTecnicoMsg");
+
+      if (perfilAtual?.perfil !== "admin") {
+        setMsg("senhaTecnicoMsg", "err", "Somente admin pode alterar senha de técnicos.");
+        return;
+      }
+
+      const usuarioId = document.getElementById("senhaTecnicoUsuarioId")?.value || "";
+      const nome = document.getElementById("senhaTecnicoNome")?.value || "técnico";
+      const novaSenha = document.getElementById("senhaTecnicoNova")?.value || "";
+      const confirmar = document.getElementById("senhaTecnicoConfirmar")?.value || "";
+
+      if (!usuarioId) {
+        setMsg("senhaTecnicoMsg", "err", "Técnico sem login vinculado.");
+        return;
+      }
+
+      if (!novaSenha || novaSenha.length < 6) {
+        setMsg("senhaTecnicoMsg", "err", "Informe uma nova senha com pelo menos 6 caracteres.");
+        return;
+      }
+
+      if (novaSenha !== confirmar) {
+        setMsg("senhaTecnicoMsg", "err", "A confirmação da senha não confere.");
+        return;
+      }
+
+      if (!navigator.onLine) {
+        setMsg("senhaTecnicoMsg", "err", "Para alterar senha é necessário estar online.");
+        return;
+      }
+
+      if (!confirm(`Deseja realmente alterar a senha de ${nome}?`)) return;
+
+      const { data: sessionData } = await supabaseClient.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        setMsg("senhaTecnicoMsg", "err", "Sessão expirada. Saia e entre novamente.");
+        return;
+      }
+
+      const btn = document.getElementById("btnConfirmarAlterarSenhaTecnico");
+      btn.disabled = true;
+      btn.textContent = "Alterando...";
+
+      try {
+        const resp = await fetch(`${SUPABASE_URL}/functions/v1/alterar-senha-tecnico`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            usuario_id: usuarioId,
+            nova_senha: novaSenha
+          })
+        });
+
+        const json = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+          throw new Error(json.error || json.message || "Erro ao alterar senha pela Edge Function.");
+        }
+
+        setMsg("senhaTecnicoMsg", "ok", "Senha alterada com sucesso.");
+        setTimeout(() => fecharModalAlterarSenhaTecnico(), 900);
+      } catch (err) {
+        setMsg("senhaTecnicoMsg", "err", "Erro ao alterar senha: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Salvar nova senha";
+      }
     }
 
     async function alterarStatusTecnico(id, ativo) {
