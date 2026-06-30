@@ -4464,15 +4464,15 @@
       renderFotosApr();
 
       if (adicionadas > 0) {
-        setMsg("novaAprMsg", "ok", `${adicionadas} foto(s) adicionada(s). Ao salvar, permita a localização para enviar as fotos.`);
+        setMsg("novaAprMsg", "ok", `${adicionadas} foto(s) adicionada(s). A localização é obrigatória e será capturada ao salvar.`);
       } else if (ignoradas > 0) {
         setMsg("novaAprMsg", "err", "Nenhuma foto válida foi selecionada. Tente tirar a foto novamente pela câmera.");
       }
     }
 
-    function obterLocalizacaoFotoRapida(timeoutMs = 3500) {
-      // Para fotos de comprovação, a localização não pode travar o salvamento.
-      // Tenta capturar rapidamente; se o celular demorar, a foto segue sem localização.
+    function obterLocalizacaoFotoRapida(timeoutMs = 20000) {
+      // v57: localização das fotos de comprovação é obrigatória.
+      // Aguarda mais tempo e não permite salvar/enviar foto sem latitude/longitude.
       return new Promise((resolve, reject) => {
         if (!navigator.geolocation) {
           reject(new Error("Este navegador não permite capturar localização."));
@@ -4483,7 +4483,7 @@
         const timer = setTimeout(() => {
           if (finalizado) return;
           finalizado = true;
-          reject(new Error("Tempo esgotado ao capturar localização da foto. A foto será salva sem localização."));
+          reject(new Error("Tempo esgotado ao capturar localização da foto. Ative a localização/GPS, mantenha a tela aberta e tente salvar novamente."));
         }, timeoutMs);
 
         navigator.geolocation.getCurrentPosition(
@@ -4503,15 +4503,15 @@
             finalizado = true;
             clearTimeout(timer);
             let msg = "Não foi possível capturar a localização da foto.";
-            if (err.code === 1) msg = "Permissão de localização negada. A foto será salva sem localização.";
-            if (err.code === 2) msg = "Localização indisponível no momento. A foto será salva sem localização.";
-            if (err.code === 3) msg = "Tempo esgotado ao capturar localização da foto. A foto será salva sem localização.";
+            if (err.code === 1) msg = "Permissão de localização negada. Permita a localização do navegador para salvar a foto.";
+            if (err.code === 2) msg = "Localização indisponível no momento. Ative o GPS/localização e tente novamente.";
+            if (err.code === 3) msg = "Tempo esgotado ao capturar localização da foto. Ative o GPS/localização, aguarde alguns segundos e tente novamente.";
             reject(new Error(msg));
           },
           {
-            enableHighAccuracy: false,
+            enableHighAccuracy: true,
             timeout: timeoutMs,
-            maximumAge: 10 * 60 * 1000
+            maximumAge: 0
           }
         );
       });
@@ -4539,16 +4539,16 @@
       } catch (geoError) {
         const mensagem = (geoError.message || "Não foi possível capturar a localização.");
 
-        // v56: localização da foto nunca bloqueia o salvamento.
-        // Se o GPS/permissão demorar, salva a foto e registra o motivo na tela.
+        // v57: localização é obrigatória para fotos de comprovação.
+        // Não salva/enviar a APR enquanto qualquer foto estiver sem latitude/longitude.
         fotosSemLocalizacao.forEach(f => {
           f.erro_localizacao = mensagem;
         });
         renderFotosApr();
         if (msgId) {
-          setMsg(msgId, "ok", "Atenção: não foi possível capturar a localização agora, mas a foto será enviada. Motivo: " + mensagem);
+          setMsg(msgId, "err", "Localização obrigatória nas fotos: " + mensagem + " Verifique se o site tem permissão de localização no navegador e tente salvar novamente.");
         }
-        return true;
+        return false;
       }
     }
 
@@ -5150,11 +5150,11 @@
 
       let localizacaoFoto = null;
       try {
-        localizacaoFoto = await obterLocalizacaoFotoRapida(3500);
+        localizacaoFoto = await obterLocalizacaoFotoRapida(20000);
       } catch (geoError) {
-        console.warn("Foto offline adicionada sem localização:", geoError);
-        // Não bloqueia a foto: a localização será tentada novamente na sincronização.
-        localizacaoFoto = null;
+        alert("Localização obrigatória para anexar foto de comprovação. " + (geoError.message || String(geoError)));
+        if (input) input.value = "";
+        return;
       }
 
       let adicionadas = 0;
@@ -5542,19 +5542,21 @@
           if (!foto?.blob) continue;
           if ((foto.tipo_local || "foto_apr") !== "foto_apr") continue;
 
-          // v56: se a foto offline foi anexada sem localização, tenta capturar rapidamente.
-          // Se o celular demorar ou negar, não trava a sincronização: a foto sobe sem localização.
+          // v57: localização da foto offline também é obrigatória.
+          // Se ainda não tiver localização, tenta capturar agora. Se falhar, a sincronização para.
           if (foto.latitude == null || foto.longitude == null) {
             try {
-              const locFotoOffline = await obterLocalizacaoFotoRapida(3500);
+              const locFotoOffline = await obterLocalizacaoFotoRapida(20000);
               foto.latitude = locFotoOffline.latitude;
               foto.longitude = locFotoOffline.longitude;
               foto.precisao_metros = locFotoOffline.precisao;
               foto.localizacao_capturada_em = locFotoOffline.capturadaEm;
+              foto.erro_localizacao = null;
               await dbOfflinePut(item);
             } catch (geoError) {
-              console.warn("Foto offline sincronizada sem localização:", geoError);
               foto.erro_localizacao = geoError.message || "Não foi possível capturar a localização da foto.";
+              await dbOfflinePut(item);
+              throw new Error("Localização obrigatória para foto de comprovação offline: " + foto.erro_localizacao);
             }
           }
 
@@ -7376,9 +7378,9 @@
       );
       if (html) return html;
       if (f?.erro_localizacao) {
-        return `<span class="small danger-text">Localização não capturada: ${escapeHtml(f.erro_localizacao)}</span>`;
+        return `<span class="small danger-text">Localização obrigatória não capturada: ${escapeHtml(f.erro_localizacao)}</span>`;
       }
-      return `<span class="small">Localização: será capturada ao salvar.</span>`;
+      return `<span class="small">Localização: obrigatória, será capturada ao salvar.</span>`;
     }
 
     function obterLocalizacaoAssinatura() {
