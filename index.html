@@ -2404,6 +2404,8 @@
     let assinaturaSelfieAtual = null;
     let detalhesAssinaturaCache = {};
     let signatureState = { drawing: false, signed: false, canvasReady: false };
+    let sincronizacaoOfflineEmAndamento = false;
+    let sincronizandoOfflineIds = new Set();
 
     const TIPOS_DOCUMENTOS_OCUPACIONAIS = [
       { tipo: "glicemia", nome: "Glicemia", anosValidade: 1 },
@@ -4869,11 +4871,14 @@
         const tecs = tecnicosItem.length || 0;
         const assinados = tecnicosItem.filter(t => !!t.assinatura_offline || !!t.assinado).length;
         const todosAssinados = tecs > 0 && assinados === tecs;
+        const estaSincronizando = item.status_sync === "sincronizando" || sincronizandoOfflineIds.has(item.offline_id);
         const status = item.status_sync === "erro"
           ? `<span class="badge cancelada">Erro</span>`
-          : todosAssinados
-            ? `<span class="badge finalizada">Assinado offline</span>`
-            : `<span class="badge aguardando_assinaturas">Pendente</span>`;
+          : estaSincronizando
+            ? `<span class="badge aguardando_assinaturas">Enviando...</span>`
+            : todosAssinados
+              ? `<span class="badge finalizada">Assinado offline</span>`
+              : `<span class="badge aguardando_assinaturas">Pendente</span>`;
 
         const htmlAssinaturasTecnicos = tecnicosItem.length ? `
           <div style="margin-top:12px; display:grid; gap:8px;">
@@ -4889,7 +4894,7 @@
                         ? `<span class="badge finalizada">Assinado</span> <span class="small">${formatarData(quando)}</span>`
                         : `<span class="badge aguardando_assinaturas">Pendente</span>`}
                     </div>
-                    ${!assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinaturaOffline('${item.offline_id}', ${idx})">Assinar ${escapeHtml(tec.nome || tec.nome_tecnico || '')}</button>` : ""}
+                    ${!assinado ? `<button class="btn btn-primary btn-mini" onclick="abrirModalAssinaturaOffline('${item.offline_id}', ${idx})" ${estaSincronizando ? "disabled" : ""}>Assinar ${escapeHtml(tec.nome || tec.nome_tecnico || '')}</button>` : ""}
                   </div>
                 </div>
               `;
@@ -4912,8 +4917,8 @@
             ${htmlAssinaturasTecnicos}
             ${item.erro_sync ? `<p class="danger-text">Último erro: ${escapeHtml(item.erro_sync)}</p>` : ""}
             <div class="row-actions" style="margin-top:12px;">
-              <button class="btn btn-primary btn-mini" onclick="sincronizarAprOffline('${item.offline_id}')" ${navigator.onLine ? "" : "disabled"}>Enviar agora</button>
-              <button class="btn btn-danger btn-mini" onclick="excluirAprOffline('${item.offline_id}')">Excluir pendência</button>
+              <button class="btn btn-primary btn-mini" onclick="sincronizarAprOffline('${item.offline_id}')" ${navigator.onLine && !estaSincronizando ? "" : "disabled"}>${estaSincronizando ? "Enviando..." : "Enviar agora"}</button>
+              <button class="btn btn-danger btn-mini" onclick="excluirAprOffline('${item.offline_id}')" ${estaSincronizando ? "disabled" : ""}>Excluir pendência</button>
             </div>
           </div>
         `;
@@ -5061,20 +5066,33 @@
         return;
       }
 
-      const lista = await dbOfflineGetAll();
-      if (!lista.length) {
-        alert("Não há APRs offline pendentes.");
+      if (sincronizacaoOfflineEmAndamento) {
+        alert("Já existe uma sincronização em andamento. Aguarde finalizar.");
         return;
       }
 
-      atualizarStatusOffline("syncing");
-      for (const item of lista) {
-        await sincronizarItemOffline(item);
+      const lista = await dbOfflineGetAll();
+      const pendentes = lista.filter(item => item.status_sync !== "sincronizando" && !sincronizandoOfflineIds.has(item.offline_id));
+      if (!pendentes.length) {
+        alert(lista.length ? "As APRs offline já estão sendo enviadas. Aguarde finalizar." : "Não há APRs offline pendentes.");
+        return;
       }
-      atualizarStatusOffline();
+
+      sincronizacaoOfflineEmAndamento = true;
+      atualizarStatusOffline("syncing");
       await renderAprsOffline();
-      await carregarAprs();
-      await atualizarDashboard();
+
+      try {
+        for (const item of pendentes) {
+          await sincronizarItemOffline(item);
+        }
+      } finally {
+        sincronizacaoOfflineEmAndamento = false;
+        atualizarStatusOffline();
+        await renderAprsOffline();
+        await carregarAprs();
+        await atualizarDashboard();
+      }
     }
 
     async function sincronizarAprOffline(offlineId) {
@@ -5082,9 +5100,20 @@
         alert("Sem internet. Conecte-se para sincronizar.");
         return;
       }
+
+      if (sincronizandoOfflineIds.has(offlineId)) {
+        alert("Esta APR já está sendo enviada. Aguarde finalizar.");
+        return;
+      }
+
       const lista = await dbOfflineGetAll();
       const item = lista.find(i => i.offline_id === offlineId);
       if (!item) return;
+
+      if (item.status_sync === "sincronizando") {
+        alert("Esta APR já está sendo enviada. Aguarde finalizar.");
+        return;
+      }
 
       atualizarStatusOffline("syncing");
       await sincronizarItemOffline(item);
@@ -5095,20 +5124,65 @@
     }
 
     async function sincronizarItemOffline(item) {
+      if (!item?.offline_id) return false;
+
+      if (sincronizandoOfflineIds.has(item.offline_id)) {
+        console.warn("Sincronização ignorada porque esta APR já está em envio:", item.offline_id);
+        return false;
+      }
+
+      sincronizandoOfflineIds.add(item.offline_id);
+      item.status_sync = "sincronizando";
+      item.erro_sync = "";
+      item.ultima_tentativa_sync = new Date().toISOString();
+      await dbOfflinePut(item);
+      await renderAprsOffline();
+
       try {
         const payloadApr = { ...(item.dados || {}) };
         payloadApr.atualizado_em = new Date().toISOString();
+        payloadApr.offline_id = item.offline_id;
 
-        const { data: aprCriada, error: aprError } = await supabaseClient
-          .from("aprs")
-          .insert(payloadApr)
-          .select()
-          .single();
+        let aprCriada = null;
 
-        if (aprError) throw aprError;
+        if (item.apr_id_sync) {
+          const { data: aprExistente, error: aprExistenteError } = await supabaseClient
+            .from("aprs")
+            .select("*")
+            .eq("id", item.apr_id_sync)
+            .maybeSingle();
+          if (aprExistenteError) throw aprExistenteError;
+          aprCriada = aprExistente || null;
+        }
+
+        if (!aprCriada) {
+          const { data: aprJaEnviada, error: aprBuscaError } = await supabaseClient
+            .from("aprs")
+            .select("*")
+            .eq("offline_id", item.offline_id)
+            .maybeSingle();
+
+          if (aprBuscaError && !String(aprBuscaError.message || "").includes("offline_id")) throw aprBuscaError;
+          aprCriada = aprJaEnviada || null;
+        }
+
+        if (!aprCriada) {
+          const { data: novaApr, error: aprError } = await supabaseClient
+            .from("aprs")
+            .insert(payloadApr)
+            .select()
+            .single();
+
+          if (aprError) throw aprError;
+          aprCriada = novaApr;
+
+          item.apr_id_sync = aprCriada.id;
+          item.numero_apr_sync = aprCriada.numero_apr || "";
+          await dbOfflinePut(item);
+        }
 
         const aprId = aprCriada.id;
-        const aprNumero = aprCriada.numero_apr || "";
+        const aprNumero = aprCriada.numero_apr || item.numero_apr_sync || "";
 
         for (let i = 0; i < (item.tecnicos || []).length; i++) {
           const t = item.tecnicos[i];
@@ -5286,6 +5360,8 @@
         await dbOfflinePut(item);
         console.error("Erro ao sincronizar APR offline:", err);
         return false;
+      } finally {
+        sincronizandoOfflineIds.delete(item.offline_id);
       }
     }
 
