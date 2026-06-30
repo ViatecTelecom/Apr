@@ -4739,6 +4739,79 @@
       renderFotosApr();
     }
 
+
+    function montarDescricaoFotoApr(base, foto) {
+      const partes = [base || "Foto de comprovação da APR"];
+      if (foto?.latitude != null && foto?.longitude != null) {
+        partes.push(`LOCALIZACAO_FOTO=${foto.latitude},${foto.longitude}`);
+      }
+      if (foto?.precisao_metros != null) {
+        partes.push(`PRECISAO_METROS=${foto.precisao_metros}`);
+      }
+      if (foto?.localizacao_capturada_em) {
+        partes.push(`LOCALIZACAO_CAPTURADA_EM=${foto.localizacao_capturada_em}`);
+      }
+      return partes.join(" | ");
+    }
+
+    function extrairLocalizacaoDescricao(descricao) {
+      const texto = String(descricao || "");
+      const matchLoc = texto.match(/LOCALIZACAO_FOTO=([-0-9.]+),([-0-9.]+)/);
+      if (!matchLoc) return null;
+      const matchPrecisao = texto.match(/PRECISAO_METROS=([-0-9.]+)/);
+      const matchData = texto.match(/LOCALIZACAO_CAPTURADA_EM=([^|]+)/);
+      return {
+        latitude: Number(matchLoc[1]),
+        longitude: Number(matchLoc[2]),
+        precisao_metros: matchPrecisao ? Number(matchPrecisao[1]) : null,
+        localizacao_capturada_em: matchData ? matchData[1].trim() : null
+      };
+    }
+
+    async function inserirRegistroFotoAprSeguro(payloadFoto) {
+      // Tentativa principal: salva nos campos novos estruturados.
+      const { error: erroCompleto } = await supabaseClient
+        .from("apr_fotos")
+        .insert(payloadFoto);
+
+      if (!erroCompleto) return { fallback: false };
+
+      const mensagem = String(erroCompleto.message || "");
+      const erroSchemaCache =
+        mensagem.includes("schema cache") ||
+        mensagem.includes("Could not find") ||
+        mensagem.includes("column") ||
+        mensagem.includes("PGRST204");
+
+      if (!erroSchemaCache) {
+        throw erroCompleto;
+      }
+
+      // Fallback anti-cache do Supabase/PostgREST:
+      // salva a foto usando somente colunas antigas e grava a localização dentro da descrição.
+      // Assim o registro não fica preso se o API cache ainda não reconheceu colunas novas.
+      const payloadFallback = {
+        apr_id: payloadFoto.apr_id,
+        enviado_por: payloadFoto.enviado_por,
+        tipo_foto: payloadFoto.tipo_foto,
+        descricao: montarDescricaoFotoApr(payloadFoto.descricao, payloadFoto),
+        storage_path: payloadFoto.storage_path,
+        arquivo_nome: payloadFoto.arquivo_nome,
+        mime_type: payloadFoto.mime_type,
+        tamanho_bytes: payloadFoto.tamanho_bytes
+      };
+
+      const { error: erroFallback } = await supabaseClient
+        .from("apr_fotos")
+        .insert(payloadFallback);
+
+      if (erroFallback) {
+        throw new Error("Erro no registro completo: " + mensagem + " | Erro no fallback: " + (erroFallback.message || JSON.stringify(erroFallback)));
+      }
+
+      return { fallback: true, motivo: mensagem };
+    }
+
     async function uploadFotosApr(aprId, numeroApr) {
       if (!fotosPendentesApr.length) return true;
 
@@ -4780,9 +4853,8 @@
           return false;
         }
 
-        const { error: dbError } = await supabaseClient
-          .from("apr_fotos")
-          .insert({
+        try {
+          const resultadoRegistro = await inserirRegistroFotoAprSeguro({
             apr_id: aprId,
             enviado_por: usuarioAtual.id,
             tipo_foto: "comprovacao_apr",
@@ -4801,8 +4873,11 @@
             localizacao_capturada_em: foto.localizacao_capturada_em || null
           });
 
-        if (dbError) {
-          setMsg("novaAprMsg", "err", "Foto enviada ao Storage, mas erro ao salvar o registro no banco: " + dbError.message + " | Rode o SQL de conferência da tabela apr_fotos que enviei e tente novamente.");
+          if (resultadoRegistro?.fallback) {
+            console.warn("Registro da foto salvo em modo compatibilidade por cache do Supabase:", resultadoRegistro.motivo);
+          }
+        } catch (dbError) {
+          setMsg("novaAprMsg", "err", "Foto enviada ao Storage, mas erro ao salvar o registro no banco: " + (dbError.message || JSON.stringify(dbError)) + " | Agora o sistema tentou também o modo compatibilidade. Confira as policies da tabela apr_fotos.");
           return false;
         }
       }
@@ -5594,7 +5669,7 @@
           });
           if (uploadError) throw new Error("Erro ao enviar foto offline para o Storage: " + (uploadError.message || JSON.stringify(uploadError)) + " | Tipo: " + mimeFoto + " | Tamanho: " + formatBytes(blobUpload.size));
 
-          const { data: fotoInserida, error: dbError } = await supabaseClient.from("apr_fotos").insert({
+          await inserirRegistroFotoAprSeguro({
             apr_id: aprId,
             enviado_por: item.usuario?.id || usuarioAtual?.id || null,
             tipo_foto: "comprovacao_apr",
@@ -5612,7 +5687,6 @@
             precisao_metros: foto.precisao_metros ?? null,
             localizacao_capturada_em: foto.localizacao_capturada_em || null
           });
-          if (dbError) throw dbError;
           foto.storage_path_sync = path;
           foto.enviada_sync = true;
           foto.enviada_sync_em = new Date().toISOString();
@@ -7369,11 +7443,17 @@
     }
 
     function formatarLocalizacaoFoto(f) {
+      let dados = f || {};
+      if ((dados.latitude == null || dados.longitude == null) && dados.descricao) {
+        const extraida = extrairLocalizacaoDescricao(dados.descricao);
+        if (extraida) dados = { ...dados, ...extraida };
+      }
+
       const html = formatarLocalizacaoGenerica(
-        f?.latitude,
-        f?.longitude,
-        f?.precisao_metros,
-        f?.localizacao_capturada_em,
+        dados?.latitude,
+        dados?.longitude,
+        dados?.precisao_metros,
+        dados?.localizacao_capturada_em,
         "Localização da foto"
       );
       if (html) return html;
