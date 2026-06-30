@@ -4917,6 +4917,8 @@
             ${htmlAssinaturasTecnicos}
             ${item.erro_sync ? `<p class="danger-text">Último erro: ${escapeHtml(item.erro_sync)}</p>` : ""}
             <div class="row-actions" style="margin-top:12px;">
+              <label class="btn btn-light btn-mini" for="inputFotosOffline-${item.offline_id}" ${estaSincronizando ? 'style="pointer-events:none;opacity:.55;"' : ''}>+ Adicionar fotos</label>
+              <input id="inputFotosOffline-${item.offline_id}" class="foto-input" type="file" accept="image/*" capture="environment" multiple onchange="adicionarFotosOffline('${item.offline_id}', event)" ${estaSincronizando ? "disabled" : ""}>
               <button class="btn btn-primary btn-mini" onclick="sincronizarAprOffline('${item.offline_id}')" ${navigator.onLine && !estaSincronizando ? "" : "disabled"}>${estaSincronizando ? "Enviando..." : "Enviar agora"}</button>
               <button class="btn btn-danger btn-mini" onclick="excluirAprOffline('${item.offline_id}')" ${estaSincronizando ? "disabled" : ""}>Excluir pendência</button>
             </div>
@@ -4932,6 +4934,84 @@
       await dbOfflineDelete(offlineId);
       await renderAprsOffline();
       await atualizarContadorOffline();
+    }
+
+    async function adicionarFotosOffline(offlineId, event) {
+      const input = event?.target;
+      const files = Array.from(input?.files || []);
+      if (!offlineId || !files.length) return;
+
+      let lista = [];
+      try {
+        lista = await dbOfflineGetAll();
+      } catch (err) {
+        alert("Erro ao abrir as pendências offline: " + (err.message || String(err)));
+        if (input) input.value = "";
+        return;
+      }
+
+      const item = lista.find(i => i.offline_id === offlineId);
+      if (!item) {
+        alert("APR offline não encontrada neste aparelho.");
+        if (input) input.value = "";
+        return;
+      }
+
+      if (item.status_sync === "sincronizando" || sincronizandoOfflineIds.has(offlineId)) {
+        alert("Esta APR está sendo enviada. Aguarde finalizar para adicionar fotos.");
+        if (input) input.value = "";
+        return;
+      }
+
+      let localizacaoFoto;
+      try {
+        localizacaoFoto = await obterLocalizacaoAssinatura();
+      } catch (geoError) {
+        alert((geoError.message || "Não foi possível capturar a localização.") + "\n\nAutorize a localização para anexar fotos de comprovação.");
+        if (input) input.value = "";
+        return;
+      }
+
+      let adicionadas = 0;
+      for (const file of files) {
+        if (!file.type.startsWith("image/")) continue;
+
+        try {
+          const comprimida = await comprimirImagem(file, 1600, 0.78);
+          item.fotos = item.fotos || [];
+          item.fotos.push({
+            id_local: crypto.randomUUID(),
+            tipo_local: "foto_apr",
+            blob: comprimida.blob,
+            nome_original: file.name,
+            mime_type: comprimida.blob.type || "image/webp",
+            tamanho_original_bytes: file.size,
+            tamanho_comprimido_bytes: comprimida.blob.size,
+            largura: comprimida.largura,
+            altura: comprimida.altura,
+            latitude: localizacaoFoto.latitude,
+            longitude: localizacaoFoto.longitude,
+            precisao_metros: localizacaoFoto.precisao,
+            localizacao_capturada_em: localizacaoFoto.capturadaEm,
+            adicionada_em: new Date().toISOString()
+          });
+          adicionadas++;
+        } catch (err) {
+          console.error(err);
+          alert("Erro ao processar a imagem: " + file.name);
+        }
+      }
+
+      if (adicionadas > 0) {
+        item.status_sync = "pendente";
+        item.erro_sync = "";
+        await dbOfflinePut(item);
+        await renderAprsOffline();
+        await atualizarContadorOffline();
+        alert(`${adicionadas} foto(s) adicionada(s) na APR offline. Agora clique em Enviar agora para sincronizar.`);
+      }
+
+      if (input) input.value = "";
     }
 
     async function coletarAprOfflineParaSalvar() {
@@ -5290,6 +5370,7 @@
 
         for (let i = 0; i < fotosParaEnviar.length; i++) {
           const foto = fotosParaEnviar[i];
+          if (foto.storage_path_sync) continue;
           const ano = new Date().getFullYear();
           const mes = String(new Date().getMonth() + 1).padStart(2, "0");
           const nomeSeguro = `${Date.now()}-${i + 1}.webp`;
@@ -5301,7 +5382,7 @@
           });
           if (uploadError) throw uploadError;
 
-          const { error: dbError } = await supabaseClient.from("apr_fotos").insert({
+          const { data: fotoInserida, error: dbError } = await supabaseClient.from("apr_fotos").insert({
             apr_id: aprId,
             enviado_por: item.usuario?.id || usuarioAtual?.id || null,
             tipo_foto: "comprovacao_apr",
@@ -5320,6 +5401,10 @@
             localizacao_capturada_em: foto.localizacao_capturada_em || null
           });
           if (dbError) throw dbError;
+          foto.storage_path_sync = path;
+          foto.enviada_sync = true;
+          foto.enviada_sync_em = new Date().toISOString();
+          await dbOfflinePut(item);
         }
 
         await supabaseClient.from("apr_linha_tempo").insert({
