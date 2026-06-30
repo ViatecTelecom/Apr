@@ -3047,7 +3047,7 @@
       const geral = statusGeralDocumentosTecnico(tecnicoId);
       const nome = t?.nome_tecnico || t?.nome || "Técnico";
       return `
-        <div class="box" style="page-break-inside: avoid;">
+        <div class="box aso-pdf-box" style="page-break-inside: avoid;">
           <p><strong>${escapeHtml(nome)}</strong></p>
           <p><strong>Status:</strong> ${escapeHtml(geral.texto)}</p>
           ${TIPOS_DOCUMENTOS_OCUPACIONAIS.map(info => `<p>${escapeHtml(linhaResumoDocumentoOcupacional(tecnicoId, info.tipo))}</p>`).join("")}
@@ -6422,6 +6422,9 @@
       const { data: respostas } = await supabaseClient.from("apr_checklist_respostas").select("*").eq("apr_id", aprId).order("ordem");
       const { data: fotos } = await supabaseClient.from("apr_fotos").select("*").eq("apr_id", aprId).order("enviada_em", { ascending: true });
 
+      // Garante que o PDF sempre puxe os dados atuais de ASO/Exames antes de montar o documento.
+      await carregarDocumentosOcupacionais();
+
       const fotosComUrl = [];
       for (const foto of (fotos || [])) {
         const { data: signed } = await supabaseClient
@@ -6493,6 +6496,9 @@
             .selfie-img { width: 86px; height: 86px; border: 1px solid #d0d5dd; border-radius: 10px; object-fit: cover; background: #fff; margin-top: 6px; display: block; }
             .assinatura-cell { min-width: 170px; }
             .selfie-label { font-size: 10px; font-weight: 700; color: #344054; margin-top: 8px; display: block; }
+            .small { font-size: 10px; color: #475467; line-height: 1.35; }
+            .foto-localizacao { margin-top: 6px; padding-top: 5px; border-top: 1px dashed #d0d5dd; }
+            .aso-pdf-box p { margin: 4px 0; }
             @media print { body { margin: 12mm; } button { display: none; } .page-break { page-break-before: always; } }
         
 
@@ -6868,6 +6874,7 @@
                   <img src="${f.signed_url}">
                   <p><strong>${escapeHtml(f.arquivo_nome || "Foto")}</strong></p>
                   <p>Enviada em: ${formatarData(f.enviada_em)}</p>
+                  <div class="foto-localizacao">${formatarLocalizacaoFoto(f)}</div>
                 </div>
               `).join("")}
             </div>
