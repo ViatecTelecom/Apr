@@ -1543,7 +1543,8 @@
 
     /* ASO v39 - layout mais organizado */
     .aso-page-clean { display: grid; gap: 16px; }
-    .aso-select-clean { display: grid; grid-template-columns: 0.85fr 1.4fr; gap: 16px; align-items: end; }
+        .aso-select-clean { display: grid; grid-template-columns: 0.85fr 1.4fr; gap: 16px; align-items: end; }
+    .aso-select-fields { display: grid; grid-template-columns: 1fr 1.15fr; gap: 12px; align-items: end; }
     .aso-select-clean h3, .aso-parecer-card h3, .aso-editor-header h3 { margin: 0 0 6px; color: var(--azul-escuro); }
     .aso-workspace { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
     .aso-sticky-panel { position: static; }
@@ -1566,7 +1567,7 @@
     .aso-alertas-details summary::-webkit-details-marker { display: none; }
     .aso-alertas-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
     .aso-alerta-item { border: 1px solid #e4e7ec; border-radius: 14px; padding: 12px; background: #fff; }
-    @media (max-width: 1200px) { .aso-workspace, .aso-select-clean { grid-template-columns: 1fr; } .aso-sticky-panel { position: static; } }
+    @media (max-width: 1200px) { .aso-workspace, .aso-select-clean, .aso-select-fields { grid-template-columns: 1fr; } .aso-sticky-panel { position: static; } }
     @media (max-width: 650px) { .aso-doc-edit summary, .aso-alertas-details summary { flex-direction: column; align-items: flex-start; } .aso-doc-linha { grid-template-columns: 1fr; } }
 
   </style>
@@ -2092,11 +2093,19 @@
                 <h3>1. Selecionar técnico</h3>
                 <p class="small">Escolha o técnico para consultar e atualizar os exames ocupacionais.</p>
               </div>
-              <div class="field" style="margin:0;">
-                <label>Técnico</label>
-                <select id="asoTecnicoSelect" onchange="selecionarTecnicoAso(this.value)">
-                  <option value="">Selecione um técnico</option>
-                </select>
+              <div class="aso-select-fields">
+                <div class="field" style="margin:0;">
+                  <label>Pesquisar técnico</label>
+                  <input id="buscaTecnicoAso" type="text" placeholder="Digite o nome do técnico..." oninput="renderSelectTecnicosAso(document.getElementById('asoTecnicoSelect')?.value || '')">
+                </div>
+
+                <div class="field" style="margin:0;">
+                  <label>Técnico</label>
+                  <select id="asoTecnicoSelect" onchange="selecionarTecnicoAso(this.value)">
+                    <option value="">Selecione um técnico</option>
+                  </select>
+                  <p class="small" id="asoTecnicoFiltroInfo" style="margin:6px 0 0;"></p>
+                </div>
               </div>
             </div>
 
@@ -3071,13 +3080,43 @@
       return alertas.sort((a, b) => b.ordem - a.ordem || String(a.validade).localeCompare(String(b.validade)) || a.tecnicoNome.localeCompare(b.tecnicoNome, "pt-BR"));
     }
 
+    function normalizarBuscaAso(valor) {
+      return String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+    }
+
     function renderSelectTecnicosAso(valorPreferido = "") {
       const select = document.getElementById("asoTecnicoSelect");
       if (!select) return;
+
+      const buscaEl = document.getElementById("buscaTecnicoAso");
+      const infoEl = document.getElementById("asoTecnicoFiltroInfo");
+      const termo = normalizarBuscaAso(buscaEl?.value || "");
       const atual = valorPreferido || select.value || "";
-      const lista = [...(tecnicosCache || [])].sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
-      select.innerHTML = `<option value="">Selecione um técnico</option>` + lista.map(t => `<option value="${t.id}">${escapeHtml(t.nome || "Sem nome")}${t.ativo ? "" : " (inativo)"}</option>`).join("");
-      if (atual && lista.some(t => t.id === atual)) select.value = atual;
+
+      const listaCompleta = [...(tecnicosCache || [])].sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+      const listaFiltrada = termo
+        ? listaCompleta.filter(t => normalizarBuscaAso(`${t.nome || ""} ${t.cargo || ""} ${t.telefone || ""} ${t.usuario_email || ""}`).includes(termo))
+        : listaCompleta;
+
+      const tecnicoAtual = atual ? listaCompleta.find(t => t.id === atual) : null;
+      const listaFinal = tecnicoAtual && !listaFiltrada.some(t => t.id === tecnicoAtual.id)
+        ? [tecnicoAtual, ...listaFiltrada]
+        : listaFiltrada;
+
+      select.innerHTML = `<option value="">Selecione um técnico</option>` + listaFinal.map(t => `<option value="${t.id}">${escapeHtml(t.nome || "Sem nome")}${t.ativo ? "" : " (inativo)"}</option>`).join("");
+      if (atual && listaFinal.some(t => t.id === atual)) select.value = atual;
+
+      if (infoEl) {
+        if (termo) {
+          infoEl.textContent = `${listaFiltrada.length} técnico(s) encontrado(s) para a busca.`;
+        } else {
+          infoEl.textContent = `${listaCompleta.length} técnico(s) cadastrado(s).`;
+        }
+      }
     }
 
     function selecionarTecnicoAso(tecnicoId) {
