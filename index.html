@@ -4470,6 +4470,53 @@
       }
     }
 
+    function obterLocalizacaoFotoRapida(timeoutMs = 3500) {
+      // Para fotos de comprovação, a localização não pode travar o salvamento.
+      // Tenta capturar rapidamente; se o celular demorar, a foto segue sem localização.
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error("Este navegador não permite capturar localização."));
+          return;
+        }
+
+        let finalizado = false;
+        const timer = setTimeout(() => {
+          if (finalizado) return;
+          finalizado = true;
+          reject(new Error("Tempo esgotado ao capturar localização da foto. A foto será salva sem localização."));
+        }, timeoutMs);
+
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            if (finalizado) return;
+            finalizado = true;
+            clearTimeout(timer);
+            resolve({
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              precisao: pos.coords.accuracy || null,
+              capturadaEm: new Date().toISOString()
+            });
+          },
+          err => {
+            if (finalizado) return;
+            finalizado = true;
+            clearTimeout(timer);
+            let msg = "Não foi possível capturar a localização da foto.";
+            if (err.code === 1) msg = "Permissão de localização negada. A foto será salva sem localização.";
+            if (err.code === 2) msg = "Localização indisponível no momento. A foto será salva sem localização.";
+            if (err.code === 3) msg = "Tempo esgotado ao capturar localização da foto. A foto será salva sem localização.";
+            reject(new Error(msg));
+          },
+          {
+            enableHighAccuracy: false,
+            timeout: timeoutMs,
+            maximumAge: 10 * 60 * 1000
+          }
+        );
+      });
+    }
+
     async function garantirLocalizacaoFotosPendentes(msgId = "novaAprMsg", bloquearSemLocalizacao = false) {
       const fotosSemLocalizacao = fotosPendentesApr.filter(f =>
         (f.tipo_local || "foto_apr") === "foto_apr" &&
@@ -4479,8 +4526,8 @@
       if (!fotosSemLocalizacao.length) return true;
 
       try {
-        if (msgId) setMsg(msgId, "ok", "Capturando localização das fotos...");
-        const localizacaoFoto = await obterLocalizacaoAssinatura();
+        if (msgId) setMsg(msgId, "ok", "Salvando fotos... tentando capturar localização rapidamente.");
+        const localizacaoFoto = await obterLocalizacaoFotoRapida(3500);
         fotosSemLocalizacao.forEach(f => {
           f.latitude = localizacaoFoto.latitude;
           f.longitude = localizacaoFoto.longitude;
@@ -4492,16 +4539,8 @@
       } catch (geoError) {
         const mensagem = (geoError.message || "Não foi possível capturar a localização.");
 
-        // v55: não deixa a foto travada. Envia a foto mesmo se o GPS falhar,
-        // mas deixa o alerta claro na tela. Assim descobrimos se o problema era
-        // localização ou upload/Storage/banco.
-        if (bloquearSemLocalizacao) {
-          const msgBloqueio = mensagem + " Autorize a localização para enviar as fotos de comprovação.";
-          if (msgId) setMsg(msgId, "err", msgBloqueio);
-          else alert(msgBloqueio);
-          return false;
-        }
-
+        // v56: localização da foto nunca bloqueia o salvamento.
+        // Se o GPS/permissão demorar, salva a foto e registra o motivo na tela.
         fotosSemLocalizacao.forEach(f => {
           f.erro_localizacao = mensagem;
         });
@@ -5109,13 +5148,13 @@
         return;
       }
 
-      let localizacaoFoto;
+      let localizacaoFoto = null;
       try {
-        localizacaoFoto = await obterLocalizacaoAssinatura();
+        localizacaoFoto = await obterLocalizacaoFotoRapida(3500);
       } catch (geoError) {
-        alert((geoError.message || "Não foi possível capturar a localização.") + "\n\nAutorize a localização para anexar fotos de comprovação.");
-        if (input) input.value = "";
-        return;
+        console.warn("Foto offline adicionada sem localização:", geoError);
+        // Não bloqueia a foto: a localização será tentada novamente na sincronização.
+        localizacaoFoto = null;
       }
 
       let adicionadas = 0;
@@ -5135,10 +5174,10 @@
             tamanho_comprimido_bytes: comprimida.blob.size,
             largura: comprimida.largura,
             altura: comprimida.altura,
-            latitude: localizacaoFoto.latitude,
-            longitude: localizacaoFoto.longitude,
-            precisao_metros: localizacaoFoto.precisao,
-            localizacao_capturada_em: localizacaoFoto.capturadaEm,
+            latitude: localizacaoFoto?.latitude ?? null,
+            longitude: localizacaoFoto?.longitude ?? null,
+            precisao_metros: localizacaoFoto?.precisao ?? null,
+            localizacao_capturada_em: localizacaoFoto?.capturadaEm || null,
             adicionada_em: new Date().toISOString()
           });
           adicionadas++;
@@ -5503,17 +5542,19 @@
           if (!foto?.blob) continue;
           if ((foto.tipo_local || "foto_apr") !== "foto_apr") continue;
 
-          // v54: se a foto offline foi anexada sem localização, captura agora na sincronização.
+          // v56: se a foto offline foi anexada sem localização, tenta capturar rapidamente.
+          // Se o celular demorar ou negar, não trava a sincronização: a foto sobe sem localização.
           if (foto.latitude == null || foto.longitude == null) {
             try {
-              const locFotoOffline = await obterLocalizacaoAssinatura();
+              const locFotoOffline = await obterLocalizacaoFotoRapida(3500);
               foto.latitude = locFotoOffline.latitude;
               foto.longitude = locFotoOffline.longitude;
               foto.precisao_metros = locFotoOffline.precisao;
               foto.localizacao_capturada_em = locFotoOffline.capturadaEm;
               await dbOfflinePut(item);
             } catch (geoError) {
-              throw new Error((geoError.message || "Não foi possível capturar a localização") + " Autorize a localização para sincronizar as fotos de comprovação.");
+              console.warn("Foto offline sincronizada sem localização:", geoError);
+              foto.erro_localizacao = geoError.message || "Não foi possível capturar a localização da foto.";
             }
           }
 
