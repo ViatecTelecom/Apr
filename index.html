@@ -1554,6 +1554,9 @@
     .aso-search-result strong { color: var(--azul-escuro); display: block; }
     .aso-search-result .small { display: block; margin-top: 3px; }
     .aso-selected-pill { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border-radius: 999px; background: #ecfdf3; color: #027a48; border: 1px solid #abefc6; font-size: 12px; font-weight: 900; }
+    .aso-selected-actions { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .aso-clear-selected-btn { width: 32px; height: 32px; border-radius: 999px; border: 1px solid #fecdca; background: #fff1f0; color: #b42318; font-weight: 900; font-size: 18px; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+    .aso-clear-selected-btn:hover { background: #fee4e2; transform: translateY(-1px); }
     .aso-select-clean h3, .aso-parecer-card h3, .aso-editor-header h3 { margin: 0 0 6px; color: var(--azul-escuro); }
     .aso-workspace { display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
     .aso-sticky-panel { position: static; }
@@ -3163,7 +3166,10 @@
               <strong>${escapeHtml(tecnicoSelecionado.nome || "Sem nome")}</strong>
               <span class="small">${escapeHtml(tecnicoSelecionado.cargo || "Sem cargo")}${tecnicoSelecionado.usuario_email ? " • " + escapeHtml(tecnicoSelecionado.usuario_email) : ""}</span>
             </div>
-            <span class="aso-selected-pill">Selecionado</span>
+            <div class="aso-selected-actions">
+              <span class="aso-selected-pill">Selecionado</span>
+              <button class="aso-clear-selected-btn" type="button" title="Remover técnico selecionado" aria-label="Remover técnico selecionado" onclick="event.stopPropagation(); limparSelecaoTecnicoAso();">×</button>
+            </div>
           </div>
         `;
         return;
@@ -3188,6 +3194,17 @@
           <span class="badge ${t.id === selecionadoId ? "finalizada" : "aguardando_assinaturas"}">${t.id === selecionadoId ? "Selecionado" : "Selecionar"}</span>
         </button>
       `).join("") + (listaFiltrada.length > 12 ? `<p class="small">Mostrando 12 de ${listaFiltrada.length}. Continue digitando para refinar.</p>` : "");
+    }
+
+    function limparSelecaoTecnicoAso() {
+      const select = document.getElementById("asoTecnicoSelect");
+      const buscaEl = document.getElementById("buscaTecnicoAso");
+      if (select) select.value = "";
+      if (buscaEl) {
+        buscaEl.value = "";
+        buscaEl.focus();
+      }
+      renderAsoAdmin("");
     }
 
     function selecionarTecnicoAsoBusca(tecnicoId) {
