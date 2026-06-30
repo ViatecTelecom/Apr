@@ -1964,8 +1964,19 @@
 
               <div class="field">
                 <label>E-mail do login</label>
-                <input id="tecEmailLogin" type="email" placeholder="email usado no Supabase Auth">
-                <p class="small">Crie primeiro o usuário em Authentication &gt; Users. Ao salvar, o sistema vincula este técnico ao login pelo e-mail.</p>
+                <input id="tecEmailLogin" type="email" placeholder="email que o técnico usará para entrar">
+                <p class="small">Ao cadastrar um novo técnico, o sistema cria o login automaticamente no Supabase. Para técnicos já existentes, o e-mail pode ser ajustado/vinculado.</p>
+              </div>
+
+              <div id="camposSenhaTecnico" class="grid grid-2">
+                <div class="field">
+                  <label>Senha inicial</label>
+                  <input id="tecSenhaInicial" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+                </div>
+                <div class="field">
+                  <label>Confirmar senha</label>
+                  <input id="tecSenhaConfirmar" type="password" placeholder="Repita a senha" autocomplete="new-password">
+                </div>
               </div>
 
               <input id="tecAsoValidade" type="hidden">
@@ -3480,6 +3491,13 @@
       btn.classList.toggle("aberto", aberto);
     }
 
+    function atualizarCamposSenhaTecnico() {
+      const id = document.getElementById("tecIdEditando")?.value || "";
+      const box = document.getElementById("camposSenhaTecnico");
+      if (!box) return;
+      box.classList.toggle("hidden", !!id);
+    }
+
     function abrirFormTecnicoNovo() {
       limparFormTecnico(true);
       const card = document.getElementById("cardFormTecnico");
@@ -3531,6 +3549,9 @@
       if (!t) return;
 
       document.getElementById("tecIdEditando").value = t.id;
+      document.getElementById("tecSenhaInicial").value = "";
+      document.getElementById("tecSenhaConfirmar").value = "";
+      atualizarCamposSenhaTecnico();
       document.getElementById("tecNome").value = t.nome || "";
       document.getElementById("tecCargo").value = t.cargo || "";
       document.getElementById("tecTelefone").value = t.telefone || "";
@@ -3553,6 +3574,9 @@
 
     function limparFormTecnico(manterAberto = false) {
       document.getElementById("tecIdEditando").value = "";
+      document.getElementById("tecSenhaInicial").value = "";
+      document.getElementById("tecSenhaConfirmar").value = "";
+      atualizarCamposSenhaTecnico();
       document.getElementById("tecNome").value = "";
       document.getElementById("tecCargo").value = "Técnico/Auxiliar de Telecomunicações";
       document.getElementById("tecTelefone").value = "";
@@ -3582,6 +3606,8 @@
       const cargo = document.getElementById("tecCargo").value.trim();
       const telefone = document.getElementById("tecTelefone").value.trim();
       const emailLogin = document.getElementById("tecEmailLogin").value.trim().toLowerCase();
+      const senhaInicial = document.getElementById("tecSenhaInicial")?.value || "";
+      const senhaConfirmar = document.getElementById("tecSenhaConfirmar")?.value || "";
       const asoValidade = document.getElementById("tecAsoValidade").value || null;
       const asoObservacao = document.getElementById("tecAsoObservacao").value.trim();
       const ativo = document.getElementById("tecAtivo").value === "true";
@@ -3591,6 +3617,76 @@
         return;
       }
 
+      if (!emailLogin) {
+        setMsg("tecMsg", "err", "Informe o e-mail de login do técnico.");
+        return;
+      }
+
+      if (!id) {
+        if (!navigator.onLine) {
+          setMsg("tecMsg", "err", "Para criar login de técnico é necessário estar online.");
+          return;
+        }
+
+        if (!senhaInicial || senhaInicial.length < 6) {
+          setMsg("tecMsg", "err", "Informe uma senha inicial com pelo menos 6 caracteres.");
+          return;
+        }
+
+        if (senhaInicial !== senhaConfirmar) {
+          setMsg("tecMsg", "err", "A confirmação da senha não confere.");
+          return;
+        }
+
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        const token = sessionData?.session?.access_token;
+
+        if (!token) {
+          setMsg("tecMsg", "err", "Sessão expirada. Saia e entre novamente para cadastrar técnico.");
+          return;
+        }
+
+        document.getElementById("btnSalvarTecnico").disabled = true;
+        document.getElementById("btnSalvarTecnico").textContent = "Criando login...";
+
+        try {
+          const resp = await fetch(`${SUPABASE_URL}/functions/v1/criar-tecnico`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              nome,
+              cargo,
+              telefone,
+              email: emailLogin,
+              senha: senhaInicial,
+              ativo,
+              aso_validade: asoValidade,
+              aso_observacao: asoObservacao || null
+            })
+          });
+
+          const json = await resp.json().catch(() => ({}));
+
+          if (!resp.ok) {
+            throw new Error(json.error || json.message || "Erro ao criar técnico pela Edge Function.");
+          }
+
+          setMsg("tecMsg", "ok", "Técnico e login criados com sucesso.");
+          limparFormTecnico();
+          await carregarTecnicos();
+          return;
+        } catch (err) {
+          setMsg("tecMsg", "err", "Erro ao criar técnico: " + err.message);
+          return;
+        } finally {
+          document.getElementById("btnSalvarTecnico").disabled = false;
+          document.getElementById("btnSalvarTecnico").textContent = "Cadastrar técnico";
+        }
+      }
+
       let usuarioIdVinculado = null;
 
       if (emailLogin) {
@@ -3598,12 +3694,12 @@
           .rpc("buscar_usuario_auth_por_email", { p_email: emailLogin });
 
         if (uidError) {
-          setMsg("tecMsg", "err", "Erro ao buscar usuário Auth pelo e-mail. Rode o SQL de ajuste da função buscar_usuario_auth_por_email. Detalhe: " + uidError.message);
+          setMsg("tecMsg", "err", "Erro ao buscar usuário Auth pelo e-mail. Rode o SQL da função buscar_usuario_auth_por_email. Detalhe: " + uidError.message);
           return;
         }
 
         if (!uidEncontrado) {
-          setMsg("tecMsg", "err", "Nenhum usuário de login encontrado com este e-mail. Crie primeiro em Authentication > Users e depois salve o técnico.");
+          setMsg("tecMsg", "err", "Nenhum usuário de login encontrado com este e-mail. Para novo técnico use o botão + Adicionar técnico; para editar, use um e-mail já existente no login.");
           return;
         }
 
@@ -3621,29 +3717,17 @@
         aso_observacao: asoObservacao || null
       };
 
-      let error;
-
-      if (id) {
-        const res = await supabaseClient
-          .from("tecnicos")
-          .update(payloadTecnico)
-          .eq("id", id);
-
-        error = res.error;
-      } else {
-        const res = await supabaseClient
-          .from("tecnicos")
-          .insert(payloadTecnico);
-
-        error = res.error;
-      }
+      const { error } = await supabaseClient
+        .from("tecnicos")
+        .update(payloadTecnico)
+        .eq("id", id);
 
       if (error) {
-        setMsg("tecMsg", "err", "Erro ao salvar técnico: " + error.message);
+        setMsg("tecMsg", "err", "Erro ao atualizar técnico: " + error.message);
         return;
       }
 
-      setMsg("tecMsg", "ok", id ? "Técnico atualizado com sucesso." : "Técnico cadastrado com sucesso.");
+      setMsg("tecMsg", "ok", "Técnico atualizado com sucesso.");
       limparFormTecnico();
       await carregarTecnicos();
     }
