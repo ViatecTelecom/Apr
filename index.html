@@ -5522,11 +5522,33 @@
         }
 
         if (!aprCriada) {
-          const { data: novaApr, error: aprError } = await supabaseClient
+          // v64: tenta criar com offline_id para evitar duplicidade. Se o Supabase ainda estiver sem a coluna
+          // ou com cache antigo, cria em modo compatibilidade sem travar a sincronização.
+          let novaApr = null;
+          let aprError = null;
+          let resApr = await supabaseClient
             .from("aprs")
             .insert(payloadApr)
             .select()
             .single();
+
+          novaApr = resApr.data;
+          aprError = resApr.error;
+
+          if (aprError && String(aprError.message || "").includes("offline_id")) {
+            console.warn("Coluna offline_id indisponível/cacheada. Criando APR offline em modo compatibilidade.", aprError);
+            const payloadCompat = { ...payloadApr };
+            delete payloadCompat.offline_id;
+
+            resApr = await supabaseClient
+              .from("aprs")
+              .insert(payloadCompat)
+              .select()
+              .single();
+
+            novaApr = resApr.data;
+            aprError = resApr.error;
+          }
 
           if (aprError) throw aprError;
           aprCriada = novaApr;
@@ -6858,6 +6880,10 @@
           </table>
 
           <h2>Atestado de saúde ocupacional</h2>
+          <div class="box" style="background:#f8fafc; page-break-inside: avoid;">
+            <p><strong>Resumo ocupacional dos técnicos envolvidos na APR.</strong></p>
+            <p class="small">Status baseado em glicemia, eletrocardiograma e laudo psicossocial cadastrados na sessão ASO / Exames.</p>
+          </div>
           ${tecsComAssinatura.map(t => htmlResumoAsoPdf(t)).join("")}
 
           <h2>Checklist</h2>
