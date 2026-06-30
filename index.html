@@ -174,6 +174,20 @@
       color: white;
     }
 
+    .btn-add-tecnico {
+      padding: 14px 20px;
+      border-radius: 16px;
+      font-size: 15px;
+      box-shadow: 0 10px 22px rgba(43, 182, 115, 0.22);
+    }
+
+    .btn-add-tecnico.aberto {
+      background: #fff1f0;
+      color: var(--erro);
+      border: 1px solid #ffdad6;
+      box-shadow: none;
+    }
+
     .btn-light {
       background: #eef4ff;
       color: var(--azul-escuro);
@@ -1924,7 +1938,7 @@
               <h2>Técnicos</h2>
               <p>Consulte, edite e adicione técnicos que poderão ser vinculados nas APRs.</p>
             </div>
-            <button class="btn btn-green" type="button" onclick="abrirFormTecnicoNovo()">+ Técnico</button>
+            <button id="btnToggleCadastroTecnico" class="btn btn-green btn-add-tecnico" type="button" onclick="toggleFormTecnico()">+ Adicionar técnico</button>
           </div>
 
           <div class="grid">
@@ -1983,7 +1997,6 @@
                   <h3 style="margin-bottom:4px;">Técnicos cadastrados</h3>
                   <p class="small">A lista fica separada do cadastro para facilitar a consulta.</p>
                 </div>
-                <button class="btn btn-green btn-mini" type="button" onclick="abrirFormTecnicoNovo()">+ Técnico</button>
               </div>
 
               <div class="grid grid-2">
@@ -3457,19 +3470,44 @@
       setMsg("tecMsg", "ok", ativo ? "Técnico ativado com sucesso." : "Técnico inativado com sucesso.");
     }
 
+    function atualizarBotaoCadastroTecnico() {
+      const card = document.getElementById("cardFormTecnico");
+      const btn = document.getElementById("btnToggleCadastroTecnico");
+      if (!btn || !card) return;
+
+      const aberto = !card.classList.contains("hidden");
+      btn.textContent = aberto ? "− Fechar cadastro" : "+ Adicionar técnico";
+      btn.classList.toggle("aberto", aberto);
+    }
+
     function abrirFormTecnicoNovo() {
       limparFormTecnico(true);
       const card = document.getElementById("cardFormTecnico");
       if (card) {
         card.classList.remove("hidden");
+        atualizarBotaoCadastroTecnico();
         setTimeout(() => card.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
       }
+    }
+
+    function toggleFormTecnico() {
+      const card = document.getElementById("cardFormTecnico");
+      if (!card) return;
+
+      const aberto = !card.classList.contains("hidden");
+      if (aberto) {
+        fecharFormTecnico();
+        return;
+      }
+
+      abrirFormTecnicoNovo();
     }
 
     function fecharFormTecnico() {
       limparFormTecnico(false);
       const card = document.getElementById("cardFormTecnico");
       if (card) card.classList.add("hidden");
+      atualizarBotaoCadastroTecnico();
     }
 
     function abrirAsoDoTecnico(id) {
@@ -3503,6 +3541,7 @@
 
       const card = document.getElementById("cardFormTecnico");
       if (card) card.classList.remove("hidden");
+      atualizarBotaoCadastroTecnico();
 
       document.getElementById("tituloFormTecnico").textContent = "Editando técnico";
       document.getElementById("btnSalvarTecnico").textContent = "Salvar alterações";
@@ -3526,6 +3565,7 @@
       document.getElementById("btnSalvarTecnico").textContent = "Cadastrar técnico";
       document.getElementById("btnCancelarTecnico").classList.add("hidden");
       if (!manterAberto) document.getElementById("cardFormTecnico")?.classList.add("hidden");
+      atualizarBotaoCadastroTecnico();
       clearMsg("tecMsg");
     }
 
